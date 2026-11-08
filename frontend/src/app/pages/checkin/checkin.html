@@ -18,7 +18,7 @@
     <div>
       <p class="ci-greet">{{ greeting() }},</p>
       <h1>{{ name() }} <span aria-hidden="true">👋</span></h1>
-      @if (me()?.arrivedAt; as at) { <p class="ci-reported">📍 Reported at the academy · <b>{{ time(at) }}</b></p> }
+      @if (me()?.arrivedAt; as at) { <p class="ci-reported" title="When you first opened the app at the academy today">📍 Reported at <b>{{ time(at) }}</b></p> }
     </div>
     @if (me(); as m) {
       <div class="ci-ring" [title]="done() + ' of ' + m.today.length + ' classes done today'">
@@ -156,21 +156,30 @@
       <div class="ci-up">
         @for (d of m.next; track d.date) {
           <div class="ci-up-day">
-            <p class="ci-up-date"><b>{{ d.label.split(' ')[0] }}</b>{{ d.label.split(' ').slice(1).join(' ') }}</p>
+            <p class="ci-up-date">
+              <b>{{ d.label.split(' ')[0] }}</b>
+              <span>{{ d.label.split(' ').slice(1).join(' ') }}</span>
+              <em>{{ (d.slots ?? d.classes).length }} {{ (d.slots ?? d.classes).length === 1 ? 'class' : 'classes' }}</em>
+            </p>
             <div class="ci-up-list">
               @for (u of d.slots ?? []; track u.slot.id) {
                 @let ui = m.classInfo?.[u.slot.id];
                 <div class="ci-up-class" [style.--c]="colour(u.slot.category)">
-                  <span class="ci-up-time">{{ u.time }}</span>
+                  <div class="ci-up-row">
+                    <span class="ci-up-time">{{ u.time }}</span>
+                    @if (ui) {
+                      <span class="ci-up-count" [class.full]="!!ui.max && ui.students >= ui.max"
+                            [title]="ui.students + ' students' + (ui.max ? ' of ' + ui.max : '')">🎓 {{ ui.students }}{{ ui.max ? '/' + ui.max : '' }}</span>
+                    }
+                  </div>
                   <div class="ci-up-what">
                     <b>
                       @if (ui?.symbol) { <span class="ci-up-sym" [class.italic]="ui?.symbolStyle === 'italic'">{{ ui?.symbol }}</span> }
-                      {{ ui?.session || u.slot.label }}
+                      <span>{{ ui?.session || u.slot.label }}</span>
                     </b>
                     <small>
                       {{ u.slot.category }}{{ ui?.session && ui?.session !== u.slot.label ? ' · ' + u.slot.label : '' }}
                       @if (ui?.meaning) { · “{{ ui?.meaning }}” }
-                      @if (ui) { · 🎓 {{ ui.students }}{{ ui.max ? '/' + ui.max : '' }} }
                     </small>
                   </div>
                 </div>

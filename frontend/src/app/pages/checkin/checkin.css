@@ -261,3 +261,23 @@
 .ci-welcome-time b{font-size:32px; color:#0b6b3f; font-variant-numeric:tabular-nums; letter-spacing:.5px}
 .ci-welcome-time small{font-size:12.5px; color:#4b6b58}
 @keyframes ci-pop{0%{transform:scale(.4); opacity:0} 70%{transform:scale(1.15)} 100%{transform:scale(1)}}
+
+/* ---------- alignment fixes ---------- */
+/* the top bar lines up with the cards below it */
+.ci-topbar{margin:0; border-radius:0 0 16px 16px}
+/* "Reported at the academy · 4:27 PM" stays on one line where it fits, and wraps cleanly where not */
+.ci-reported{flex-wrap:wrap; row-gap:2px; line-height:1.3}
+.ci-reported b{white-space:nowrap}
+
+/* coming up: the day across the top of its box, the classes full width beneath */
+.ci-up-day{display:flex; flex-direction:column; gap:10px}
+.ci-up-date{flex-direction:row; align-items:baseline; justify-content:flex-start; gap:8px; padding:8px 12px; text-align:left}
+.ci-up-date b{font-size:18px}
+.ci-up-date span{font-size:14px; font-weight:700; color:#8e2b52}
+.ci-up-date em{margin-left:auto; font-style:normal; font-size:12px; font-weight:700; color:#8a6f86}
+.ci-up-row{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.ci-up-count{flex:none; padding:2px 8px; border-radius:999px; background:#fff; border:1px solid #e6dcea;
+  font-size:11.5px; font-weight:800; color:#5b4660; font-variant-numeric:tabular-nums}
+.ci-up-count.full{background:#fdecec; border-color:#f3c0c0; color:#9c1d1d}
+.ci-up-what b{align-items:center}
+.ci-up-what b span:last-child{min-width:0}
