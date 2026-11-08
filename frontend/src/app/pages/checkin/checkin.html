@@ -8,10 +8,16 @@
 
   <!-- ============ hello ============ -->
   <header class="ci-hello">
+    <!-- today, in big letters -->
+    @if (bigDate(); as bd) {
+      <div class="ci-bigdate" [attr.aria-label]="me()?.dateLabel">
+        <span class="ci-bigdate-num">{{ bd.num }}</span>
+        <span class="ci-bigdate-rest"><b>{{ bd.day }}</b><small>{{ bd.month }} {{ bd.year }}</small></span>
+      </div>
+    }
     <div>
       <p class="ci-greet">{{ greeting() }},</p>
       <h1>{{ name() }} <span aria-hidden="true">👋</span></h1>
-      <p class="ci-date">{{ me()?.dateLabel }}</p>
       @if (me()?.arrivedAt; as at) { <p class="ci-reported">📍 Reported at the academy · <b>{{ time(at) }}</b></p> }
     </div>
     @if (me(); as m) {

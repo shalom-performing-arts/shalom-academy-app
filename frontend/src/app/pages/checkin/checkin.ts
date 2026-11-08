@@ -48,6 +48,19 @@ export class CheckIn {
     return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   });
   protected readonly name = computed(() => this.me()?.teacher.name || this.auth.teacherName() || 'Teacher');
+  /** today in big letters: "8" · "Sunday" · "November 2026" (the academy's date, from the server) */
+  protected readonly bigDate = computed(() => {
+    const iso = this.me()?.date;
+    if (!iso) return null;
+    const [y, m, d] = iso.split('-').map(Number);
+    const at = new Date(y, m - 1, d);
+    return {
+      num: d,
+      day: at.toLocaleDateString('en-GB', { weekday: 'long' }),
+      month: at.toLocaleDateString('en-GB', { month: 'long' }),
+      year: y,
+    };
+  });
   /** classes marked today (by the teacher, or ticked by the office) */
   protected readonly done = computed(() => (this.me()?.today ?? []).filter(c => c.state === 'COMPLETE').length);
   /** classes that can be marked right now */
