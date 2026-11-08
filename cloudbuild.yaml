@@ -25,8 +25,8 @@ steps:
 
 substitutions:
   _SERVICE: shalom
-  _REGION: us-central1
-  _IMAGE: us-central1-docker.pkg.dev/${PROJECT_ID}/shalom/app
+  _REGION: asia-southeast1
+  _IMAGE: asia-southeast1-docker.pkg.dev/${PROJECT_ID}/shalom/app
 
 images: ['${_IMAGE}:${SHORT_SHA}', '${_IMAGE}:latest']
 options:

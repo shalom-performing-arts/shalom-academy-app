@@ -9,7 +9,7 @@
 
 param(
     [string]$Project = 'shalom-music-school',
-    [string]$Region  = 'us-central1',          # Iowa: beside the Neon database (AWS us-east-2, Ohio), which the app talks to many times per action
+    [string]$Region  = 'asia-southeast1',      # Singapore: closest to Sri Lanka, beside the Neon database (AWS ap-southeast-1)
     [string]$Service = 'shalom',
     [int]$MinInstances = 0                      # 0 = free when idle (a few seconds' wait after a quiet spell); 1 = always ready (~US$10-15/month)
 )
