@@ -9,7 +9,9 @@
 FROM node:22-alpine AS site
 WORKDIR /site
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci --no-audit --no-fund
+# the lock file is made on Windows; Linux needs a few extra optional packages, so if the strict
+# install finds them missing, fall back to a normal install that adds them
+RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 COPY frontend/ ./
 RUN npx ng build --configuration production
 
