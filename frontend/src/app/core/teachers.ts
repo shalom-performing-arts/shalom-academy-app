@@ -146,6 +146,10 @@ export interface TodayClass {
   doneClosesAt: string;
   doneAt: string | null;
   note: string | null;
+  /** the teacher's own mark, today, in a period not yet paid */
+  canUndo: boolean;
+  /** why it cannot be undone here, when it is marked but cannot be */
+  undoBlocked: string | null;
 }
 
 export interface MeOut {

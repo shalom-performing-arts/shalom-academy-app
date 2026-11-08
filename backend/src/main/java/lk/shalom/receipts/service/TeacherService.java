@@ -355,7 +355,8 @@ public class TeacherService {
 
     public record TodayClass(Slot slot, String time, SlotState state, String opensAt, String closesAt,
                              Instant checkedAt, String method, List<String> others,
-                             String doneOpensAt, String doneClosesAt, Instant doneAt, String note) {}
+                             String doneOpensAt, String doneClosesAt, Instant doneAt, String note,
+                             boolean canUndo, String undoBlocked) {}
 
     public record MeOut(TeacherOut teacher, String date, String dateLabel, Holiday holiday, boolean siteSet,
                         Integer radius, Double siteLat, Double siteLng, List<TodayClass> today, PayLine pay,
@@ -370,6 +371,7 @@ public class TeacherService {
         LocalDateTime now = LocalDateTime.now(clock.withZone(SRI_LANKA));
         Holiday h = holiday(b, d.toString());
         Site site = b.site();
+        boolean paidAlready = b.payouts().stream().anyMatch(p -> p.period().equals(periodOf(d)) && p.teacherId().equals(teacherId));
         List<TodayClass> classes = new ArrayList<>();
         for (Slot s : slotsOn(b, d)) {
             Mark mine = b.attendance().stream().filter(m -> m.date().equals(d.toString()) && m.slotId().equals(s.id())
@@ -395,7 +397,11 @@ public class TeacherService {
                     mine == null ? null : mine.method(), others,
                     doneOpens == null ? "" : clock12(doneOpens.toLocalTime()),
                     doneCloses == null ? "" : clock12(doneCloses.toLocalTime()),
-                    mine == null ? null : mine.doneAt(), mine == null ? null : mine.note()));
+                    mine == null ? null : mine.doneAt(), mine == null ? null : mine.note(),
+                    mine != null && SELF.equals(mine.method()) && !paidAlready,
+                    // why a mark cannot be taken back here, so the page says so instead of a button that fails
+                    mine == null ? null : !SELF.equals(mine.method()) ? "Marked by the office"
+                            : paidAlready ? "This pay period is marked paid — ask the office to change it" : null));
         }
         String period = periodOf(d);
         PayLine pay = salary(b, period).lines().stream().filter(l -> l.teacherId().equals(teacherId)).findFirst().orElse(null);

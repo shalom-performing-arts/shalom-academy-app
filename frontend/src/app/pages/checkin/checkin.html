@@ -53,7 +53,7 @@
   }
 
   @if (message(); as msg) {
-    <p class="ci-msg" [class.ok]="msg.ok" [class.bad]="!msg.ok" role="status">{{ msg.text }}</p>
+    @if (!msg.slotId) { <p class="ci-msg" [class.ok]="msg.ok" [class.bad]="!msg.ok" role="status">{{ msg.text }}</p> }
   }
 
   <!-- ============ today ============ -->
@@ -70,33 +70,50 @@
     @if (nothingOpen(); as why) { <p class="ci-msg info">🕒 {{ why }}</p> }
     @if (open().length) { <p class="ci-msg finish">🎵 Taught a class today? Tap <b>Mark attended</b> — any time until the end of the day.</p> }
     @for (c of m.today; track c.slot.id) {
-      <article class="ci-class" [class]="'ci-class st-' + c.state" [style.--c]="colour(c.slot.category)">
-        <div class="ci-time">
-          <b>{{ c.time.split(' – ')[0] }}</b>
-          <small>{{ c.time.split(' – ')[1] }}</small>
-        </div>
-        <div class="ci-what">
-          <b>{{ c.slot.label }}</b>
-          <small>{{ c.slot.category }}{{ c.others.length ? ' · with ' + c.others.join(', ') : '' }}</small>
-        </div>
-        <div class="ci-act">
+      <article class="ci-card" [class]="'ci-card st-' + c.state" [style.--c]="colour(c.slot.category)">
+        <!-- when, what kind, and where it stands -->
+        <div class="ci-card-top">
+          <span class="ci-chip">🕓 {{ c.time }}</span>
           @switch (c.state) {
-            @case ('OPEN') {
-              <button type="button" class="ci-btn" [disabled]="!!busy()" (click)="askMark(c)">
-                {{ busy() === c.slot.id ? 'Saving…' : 'Mark attended' }}</button>
-            }
-            @case ('COMPLETE') {
-              <span class="ci-done">✓ Attended
-                @if (c.method === 'self') {
-                  <button type="button" class="ci-undo" [disabled]="!!busy()" (click)="undo(c)">
-                    {{ busy() === c.slot.id ? 'Saving…' : 'Undo' }}</button>
-                } @else { <small>by the office</small> }
-              </span>
-            }
-            @case ('LATER') { <span class="ci-later">Opens<b>{{ c.opensAt }}</b></span> }
-            @case ('HOLIDAY') { <span class="ci-later">No class</span> }
+            @case ('COMPLETE') { <span class="ci-badge done">✓ Attended</span> }
+            @case ('OPEN') { <span class="ci-badge open">● Open now</span> }
+            @case ('LATER') { <span class="ci-badge later">Opens {{ c.opensAt }}</span> }
+            @case ('HOLIDAY') { <span class="ci-badge later">No class</span> }
           }
         </div>
+        <h3 class="ci-card-title">{{ c.slot.label }}</h3>
+        <p class="ci-card-sub">
+          <span class="ci-cat">{{ c.slot.category }}</span>
+          @if (c.others.length) { <span>👥 with {{ c.others.join(', ') }}</span> }
+        </p>
+
+        <!-- the one thing to do -->
+        @switch (c.state) {
+          @case ('OPEN') {
+            <button type="button" class="ci-mark" [disabled]="!!busy()" (click)="askMark(c)">
+              {{ busy() === c.slot.id ? 'Saving…' : '✋ Mark attended' }}</button>
+          }
+          @case ('COMPLETE') {
+            <div class="ci-marked">
+              <span class="ci-marked-tick" aria-hidden="true">✓</span>
+              <div><b>You taught this class</b>
+                @if (!c.canUndo && c.undoBlocked) { <small>{{ c.undoBlocked }}</small> }
+                @else { <small>Marked by mistake? You can undo it today.</small> }
+              </div>
+              @if (c.canUndo) {
+                <button type="button" class="ci-undo" [disabled]="!!busy()" (click)="undo(c)">
+                  {{ busy() === c.slot.id ? 'Saving…' : '↺ Undo' }}</button>
+              }
+            </div>
+          }
+          @case ('LATER') { <p class="ci-wait">You can mark this class from <b>{{ c.opensAt }}</b>.</p> }
+        }
+
+        @if (message(); as msg) {
+          @if (msg.slotId === c.slot.id) {
+            <p class="ci-card-msg" [class.ok]="msg.ok" [class.bad]="!msg.ok" role="status">{{ msg.text }}</p>
+          }
+        }
         @if (c.state === 'COMPLETE' && c.note) {
           <p class="ci-note">“{{ c.note }}”</p>
         }

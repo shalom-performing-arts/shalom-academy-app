@@ -116,15 +116,24 @@ class TeacherServiceTest {
         // and mark it again
         s.checkIn("ijini", new CheckIn("wed-1530-kids", LAT, LNG, 10.0));
         assertThat(line(s, "ijini").weekday()).isEqualTo(1);
+        assertThat(today(s, "wed-1530-kids").canUndo()).isTrue();
 
         // the office's tick stays with the office
         s.setMark("2026-11-04", "wed-1700-junior", "ijini", true);
+        assertThat(today(s, "wed-1700-junior").canUndo()).isFalse();
+        assertThat(today(s, "wed-1700-junior").undoBlocked()).contains("office");
         assertThatThrownBy(() -> s.unmark("ijini", new Unmark("wed-1700-junior")))
                 .hasMessageContaining("office marked");
-        // once the period is paid, changes go through the office
+        // once the period is paid, changes go through the office (and the page says so)
         s.setPaid("2026-11", "ijini", true);
+        assertThat(today(s, "wed-1530-kids").canUndo()).isFalse();
+        assertThat(today(s, "wed-1530-kids").undoBlocked()).contains("paid");
         assertThatThrownBy(() -> s.unmark("ijini", new Unmark("wed-1530-kids")))
                 .hasMessageContaining("already been paid");
+    }
+
+    private static TeacherService.TodayClass today(TeacherService s, String slot) {
+        return s.me("ijini").today().stream().filter(c -> c.slot().id().equals(slot)).findFirst().orElseThrow();
     }
 
     private static SlotState state(TeacherService s, String slot) {

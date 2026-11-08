@@ -40,7 +40,7 @@ export class CheckIn {
   protected readonly loadError = signal('');
   protected readonly where = signal<Where>({ kind: 'idle' });
   protected readonly busy = signal('');          // slot id being checked in
-  protected readonly message = signal<{ text: string; ok: boolean } | null>(null);
+  protected readonly message = signal<{ text: string; ok: boolean; slotId?: string } | null>(null);
   protected readonly money = money;
 
   private fix: Fix | null = null;
@@ -183,15 +183,15 @@ export class CheckIn {
     try {
       const f = await this.current();
       if (!f) {
-        this.message.set({ text: 'Your phone did not share its location. ' + this.whereHelp(), ok: false });
+        this.message.set({ text: 'Your phone did not share its location. ' + this.whereHelp(), ok: false, slotId: c.slot.id });
         return;
       }
       this.me.set(await this.api.checkIn(c.slot.id, f.lat, f.lng, f.accuracy));
       this.updateWhere();
-      this.message.set({ text: `✓ ${c.slot.label} marked. Thank you!`, ok: true });
+      this.message.set({ text: `✓ ${c.slot.label} marked. Thank you!`, ok: true, slotId: c.slot.id });
       navigator.vibrate?.(60);
     } catch (e) {
-      this.message.set({ text: errorMessage(e, 'Could not mark the class.'), ok: false });
+      this.message.set({ text: errorMessage(e, 'Could not mark the class.'), ok: false, slotId: c.slot.id });
     } finally {
       this.busy.set('');
     }
@@ -204,9 +204,9 @@ export class CheckIn {
     this.message.set(null);
     try {
       this.me.set(await this.api.unmark(c.slot.id));
-      this.message.set({ text: `${c.slot.label} is no longer marked.`, ok: true });
+      this.message.set({ text: `${c.slot.label} is no longer marked.`, ok: true, slotId: c.slot.id });
     } catch (e) {
-      this.message.set({ text: errorMessage(e, 'Could not change the mark.'), ok: false });
+      this.message.set({ text: errorMessage(e, 'Could not change the mark.'), ok: false, slotId: c.slot.id });
     } finally {
       this.busy.set('');
     }
