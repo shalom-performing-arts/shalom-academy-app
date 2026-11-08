@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,100 +117,118 @@ public class PgRosterRepository extends AbstractRosterRepository {
      */
     @Override
     protected void writeRaw(Map<String, Object> raw) {
+        // Everything goes in a handful of batches rather than one statement per row: the database
+        // may be a network hop away (Neon), and 200 single round trips made saving a student slow.
         db.inTx(() -> {
             List<Map<String, Object>> categories = maps(raw.get("categories"));
             List<Map<String, Object>> classes = maps(raw.get("classes"));
             List<Map<String, Object>> students = maps(raw.get("students"));
 
-            Set<String> catNames = new HashSet<>();
+            Set<String> catNames = new LinkedHashSet<>();
+            List<Object[]> catRows = new ArrayList<>();
+            List<Object[]> changeRows = new ArrayList<>();
             for (int i = 0; i < categories.size(); i++) {
                 Map<String, Object> c = categories.get(i);
                 String name = str(c.get("name"));
                 if (name == null || !catNames.add(name)) continue;
-                db.jdbc.update("""
-                        insert into categories (name, position, fee, billing, term_months, uses_sessions)
-                        values (?, ?, ?, ?, ?::int[], ?)
-                        on conflict (name) do update set position = excluded.position, fee = excluded.fee,
-                            billing = excluded.billing, term_months = excluded.term_months, uses_sessions = excluded.uses_sessions""",
-                        name, i, dec(c.get("fee")), billing(c.get("billing")), Db.intArray(ints(c.get("termMonths"))),
-                        !Boolean.FALSE.equals(c.get("usesSessions")));
-                db.jdbc.update("delete from category_fee_changes where category = ?", name);
+                catRows.add(new Object[]{name, i, dec(c.get("fee")), billing(c.get("billing")),
+                        Db.intArray(ints(c.get("termMonths"))), !Boolean.FALSE.equals(c.get("usesSessions"))});
+                Set<String> months = new HashSet<>();
                 for (Map<String, Object> f : maps(c.get("changes"))) {
                     String from = str(f.get("from"));
                     BigDecimal fee = dec(f.get("fee"));
-                    if (from == null || fee == null) continue;
-                    db.jdbc.update("""
-                            insert into category_fee_changes (category, from_month, fee) values (?, ?, ?)
-                            on conflict (category, from_month) do update set fee = excluded.fee""", name, from, fee);
+                    if (from == null || fee == null || !months.add(from)) continue;
+                    changeRows.add(new Object[]{name, from, fee});
                 }
             }
             // a class named only on its students or sessions (older files) is added so they can refer to it
             List<String> implied = new ArrayList<>();
-            for (Map<String, Object> s : students) implied.add(str(s.get("category")));
+            for (Map<String, Object> st : students) implied.add(str(st.get("category")));
             for (Map<String, Object> c : classes) implied.add(str(c.get("category")));
+            List<Object[]> impliedRows = new ArrayList<>();
             for (String name : implied) {
                 if (name == null || !catNames.add(name)) continue;
-                db.jdbc.update("insert into categories (name, position, billing) values (?, ?, 'monthly') on conflict do nothing",
-                        name, catNames.size() + 100);
+                impliedRows.add(new Object[]{name, catNames.size() + 100});
             }
+            batch("""
+                    insert into categories (name, position, fee, billing, term_months, uses_sessions)
+                    values (?, ?, ?, ?, ?::int[], ?)
+                    on conflict (name) do update set position = excluded.position, fee = excluded.fee,
+                        billing = excluded.billing, term_months = excluded.term_months, uses_sessions = excluded.uses_sessions""", catRows);
+            batch("insert into categories (name, position, billing) values (?, ?, 'monthly') on conflict do nothing", impliedRows);
+            db.jdbc.update("delete from category_fee_changes");
+            batch("insert into category_fee_changes (category, from_month, fee) values (?, ?, ?)", changeRows);
 
-            Set<String> sessionNames = new HashSet<>();
+            Set<String> sessionNames = new LinkedHashSet<>();
+            List<Object[]> sessionRows = new ArrayList<>();
             for (int i = 0; i < classes.size(); i++) {
                 Map<String, Object> c = classes.get(i);
                 String name = str(c.get("name"));
                 if (name == null || !sessionNames.add(name)) continue;
-                db.jdbc.update("""
-                        insert into sessions (name, position, category, day, time, max_students, family, meaning, symbol, symbol_style)
-                        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        on conflict (name) do update set position = excluded.position, category = excluded.category,
-                            day = excluded.day, time = excluded.time, max_students = excluded.max_students,
-                            family = excluded.family, meaning = excluded.meaning, symbol = excluded.symbol,
-                            symbol_style = excluded.symbol_style""",
-                        name, i, str(c.get("category")), str(c.get("day")), str(c.get("time")), positiveInt(c.get("max")),
-                        str(c.get("family")), str(c.get("meaning")), str(c.get("symbol")), str(c.get("symbolStyle")));
+                sessionRows.add(new Object[]{name, i, str(c.get("category")), str(c.get("day")), str(c.get("time")),
+                        positiveInt(c.get("max")), str(c.get("family")), str(c.get("meaning")), str(c.get("symbol")),
+                        str(c.get("symbolStyle"))});
             }
+            batch("""
+                    insert into sessions (name, position, category, day, time, max_students, family, meaning, symbol, symbol_style)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    on conflict (name) do update set position = excluded.position, category = excluded.category,
+                        day = excluded.day, time = excluded.time, max_students = excluded.max_students,
+                        family = excluded.family, meaning = excluded.meaning, symbol = excluded.symbol,
+                        symbol_style = excluded.symbol_style""", sessionRows);
 
-            Set<String> ids = new HashSet<>();
+            Set<String> ids = new LinkedHashSet<>();
+            List<Object[]> studentRows = new ArrayList<>();
             for (int i = 0; i < students.size(); i++) {
-                Map<String, Object> s = students.get(i);
-                String id = firstOf(s, "sapaId", "studentNo", "key", "code", "id");
-                String name = str(s.get("name"));
+                Map<String, Object> st = students.get(i);
+                String id = firstOf(st, "sapaId", "studentNo", "key", "code", "id");
+                String name = str(st.get("name"));
                 if (id == null || name == null || !ids.add(id)) continue;
                 Map<String, Object> extra = new LinkedHashMap<>();
-                s.forEach((k, v) -> { if (!COLUMNS.contains(k) && v != null) extra.put(k, v); });
-                String session = str(s.get("className"));
+                st.forEach((k, v) -> { if (!COLUMNS.contains(k) && v != null) extra.put(k, v); });
+                String session = str(st.get("className"));
                 // a session that no longer exists stays on the student, as it would in the file
                 if (session != null && !sessionNames.contains(session)) extra.put("className", session);
-                db.jdbc.update("""
-                        insert into students (id, legacy_id, row_key, position, name, category, session, class_day, class_time,
-                                              fee, special_fee, active, parent, phone, note, country, family, date_of_birth,
-                                              custom, extra, updated_at)
-                        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date, ?::jsonb, ?::jsonb, now())
-                        on conflict (id) do update set legacy_id = excluded.legacy_id, row_key = excluded.row_key,
-                            position = excluded.position, name = excluded.name, category = excluded.category,
-                            session = excluded.session, class_day = excluded.class_day, class_time = excluded.class_time,
-                            fee = excluded.fee, special_fee = excluded.special_fee, active = excluded.active,
-                            parent = excluded.parent, phone = excluded.phone, note = excluded.note, country = excluded.country,
-                            family = excluded.family, date_of_birth = excluded.date_of_birth, custom = excluded.custom, extra = excluded.extra, updated_at = now()""",
-                        id, str(s.get("id")), str(s.get("key")), i, name, str(s.get("category")),
+                studentRows.add(new Object[]{id, str(st.get("id")), str(st.get("key")), i, name, str(st.get("category")),
                         session != null && sessionNames.contains(session) ? session : null,
-                        str(s.get("classDay")), str(s.get("classTime")), dec(s.get("fee")), dec(s.get("specialFee")),
-                        !Boolean.FALSE.equals(s.get("active")), str(s.get("parent")), str(s.get("phone")), str(s.get("note")),
-                        str(s.get("country")), str(s.get("family")), dateOrNull(s.get("dateOfBirth")),
-                        db.toJson(s.get("custom") instanceof Map<?, ?> m ? m : Map.of()), db.toJson(extra));
+                        str(st.get("classDay")), str(st.get("classTime")), dec(st.get("fee")), dec(st.get("specialFee")),
+                        !Boolean.FALSE.equals(st.get("active")), str(st.get("parent")), str(st.get("phone")), str(st.get("note")),
+                        str(st.get("country")), str(st.get("family")), dateOrNull(st.get("dateOfBirth")),
+                        db.toJson(st.get("custom") instanceof Map<?, ?> m ? m : Map.of()), db.toJson(extra)});
             }
+            // a row that has not changed is left alone (the WHERE), so only real changes are written
+            batch("""
+                    insert into students (id, legacy_id, row_key, position, name, category, session, class_day, class_time,
+                                          fee, special_fee, active, parent, phone, note, country, family, date_of_birth,
+                                          custom, extra, updated_at)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date, ?::jsonb, ?::jsonb, now())
+                    on conflict (id) do update set legacy_id = excluded.legacy_id, row_key = excluded.row_key,
+                        position = excluded.position, name = excluded.name, category = excluded.category,
+                        session = excluded.session, class_day = excluded.class_day, class_time = excluded.class_time,
+                        fee = excluded.fee, special_fee = excluded.special_fee, active = excluded.active,
+                        parent = excluded.parent, phone = excluded.phone, note = excluded.note, country = excluded.country,
+                        family = excluded.family, date_of_birth = excluded.date_of_birth, custom = excluded.custom,
+                        extra = excluded.extra, updated_at = now()
+                    where (students.legacy_id, students.row_key, students.position, students.name, students.category,
+                           students.session, students.class_day, students.class_time, students.fee, students.special_fee,
+                           students.active, students.parent, students.phone, students.note, students.country, students.family,
+                           students.date_of_birth, students.custom, students.extra)
+                      is distinct from
+                          (excluded.legacy_id, excluded.row_key, excluded.position, excluded.name, excluded.category,
+                           excluded.session, excluded.class_day, excluded.class_time, excluded.fee, excluded.special_fee,
+                           excluded.active, excluded.parent, excluded.phone, excluded.note, excluded.country, excluded.family,
+                           excluded.date_of_birth, excluded.custom, excluded.extra)""", studentRows);
 
-            // removed last: students, then sessions, then classes
-            for (String id : db.jdbc.queryForList("select id from students", String.class)) {
-                if (!ids.contains(id)) db.jdbc.update("delete from students where id = ?", id);
-            }
-            for (String n : db.jdbc.queryForList("select name from sessions", String.class)) {
-                if (!sessionNames.contains(n)) db.jdbc.update("delete from sessions where name = ?", n);
-            }
-            for (String n : db.jdbc.queryForList("select name from categories", String.class)) {
-                if (!catNames.contains(n)) db.jdbc.update("delete from categories where name = ?", n);
-            }
+            // removed last, each in one statement: students, then sessions, then classes
+            db.jdbc.update("delete from students where not (id = any (?::text[]))", Db.textArray(List.copyOf(ids)));
+            db.jdbc.update("delete from sessions where not (name = any (?::text[]))", Db.textArray(List.copyOf(sessionNames)));
+            db.jdbc.update("delete from categories where not (name = any (?::text[]))", Db.textArray(List.copyOf(catNames)));
         });
+    }
+
+    /** one round trip for many rows */
+    private void batch(String sql, List<Object[]> rows) {
+        if (!rows.isEmpty()) db.jdbc.batchUpdate(sql, rows);
     }
 
     /* ---------------- helpers ---------------- */
