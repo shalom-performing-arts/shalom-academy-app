@@ -137,26 +137,6 @@
         }
       </div>
     }
-
-    <!-- ============ this pay period ============ -->
-    @if (m.pay; as p) {
-      <h2 class="ci-h2">This pay period</h2>
-      <div class="ci-pay">
-        <p class="ci-pay-period">{{ m.periodLabel }}</p>
-        <div class="ci-pay-grid">
-          <div><b>{{ p.weekday }}</b><small>weekday classes</small></div>
-          <div><b>{{ p.weekend }}</b><small>weekend classes</small></div>
-          <div><b>{{ classes() }}</b><small>in all</small></div>
-        </div>
-        <dl>
-          <dt>Classes</dt><dd>Rs. {{ money(p.classPay) }}</dd>
-          <dt>Transport</dt><dd>{{ p.transport ? 'Rs. ' + money(p.transport) : 'after your first class' }}</dd>
-          @if (p.adjustment) { <dt>Adjustment{{ p.adjustmentNote ? ' · ' + p.adjustmentNote : '' }}</dt><dd>Rs. {{ money(p.adjustment) }}</dd> }
-          <dt class="tot">So far</dt><dd class="tot">Rs. {{ money(p.total) }}</dd>
-        </dl>
-        @if (p.paidAt) { <p class="ci-paid">✓ Paid on {{ day(p.paidAt) }}</p> }
-      </div>
-    }
   } @else if (!loadError()) {
     <p class="ci-loading">Loading your classes…</p>
   }

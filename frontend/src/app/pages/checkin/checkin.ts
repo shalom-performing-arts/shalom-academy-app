@@ -3,7 +3,6 @@ import { RouterLink } from '@angular/router';
 import { errorMessage } from '../../core/api';
 import { Auth } from '../../core/auth';
 import { MeOut, TeacherApi, TodayClass } from '../../core/teachers';
-import { money } from '../../receipt/format';
 
 type Where =
   | { kind: 'idle' }
@@ -23,7 +22,7 @@ const CATEGORY_COLOURS: Record<string, string> = {
 
 /**
  * A teacher's phone at the academy: today's classes, one big button to check in to each,
- * and what this pay period comes to so far. The phone's location is checked on the server
+ * The phone's location is checked on the server
  * too, so the button only works at the academy.
  */
 @Component({
@@ -41,7 +40,6 @@ export class CheckIn {
   protected readonly where = signal<Where>({ kind: 'idle' });
   protected readonly busy = signal('');          // slot id being checked in
   protected readonly message = signal<{ text: string; ok: boolean; slotId?: string } | null>(null);
-  protected readonly money = money;
 
   private fix: Fix | null = null;
 
@@ -63,7 +61,6 @@ export class CheckIn {
     return '';
   });
 
-  protected readonly classes = computed(() => this.me()?.pay ? this.me()!.pay!.weekday + this.me()!.pay!.weekend : 0);
 
   /** the class waiting for the teacher's "are you sure?" */
   protected readonly confirming = signal<TodayClass | null>(null);
