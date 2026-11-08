@@ -58,6 +58,8 @@ public class TeacherService {
     private static final DateTimeFormatter SHORT = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH);
     public static final String SELF = "self";
     public static final String OFFICE = "office";
+    /** a teacher can mark a class from this many minutes before it starts, until the end of that day */
+    public static final int MARK_OPENS_MINUTES = 15;
 
     private final TeacherRepository repo;
     private final Clock clock;
@@ -406,7 +408,7 @@ public class TeacherService {
                             && m.slotId().equals(s.id()) && !m.teacherId().equals(teacherId))
                     .map(m -> name(b, m.teacherId())).toList();
             LocalTime start = startTime(s);
-            LocalDateTime opens = start == null ? null : d.atTime(start).minusMinutes(site.early());
+            LocalDateTime opens = start == null ? null : d.atTime(start).minusMinutes(MARK_OPENS_MINUTES);
             LocalDateTime closes = start == null ? null : d.atTime(start).plusMinutes(s.length() + site.late());
             LocalDateTime ends = start == null ? null : d.atTime(start).plusMinutes(s.length());
             LocalDateTime doneOpens = ends == null ? null : ends.minusMinutes(Site.DONE_EARLY);
@@ -471,7 +473,7 @@ public class TeacherService {
                 .orElseThrow(() -> ApiException.badRequest("That class is not on today's timetable."));
         LocalTime start = startTime(s);
         LocalDateTime now = LocalDateTime.now(clock.withZone(SRI_LANKA));
-        LocalDateTime opens = d.atTime(start).minusMinutes(site.early());
+        LocalDateTime opens = d.atTime(start).minusMinutes(MARK_OPENS_MINUTES);
         LocalDateTime closes = d.atTime(start).plusMinutes(s.length() + site.late());
         if (now.isBefore(opens)) {
             throw ApiException.badRequest("Marking " + s.label() + " opens at " + clock12(opens.toLocalTime()) + ".");

@@ -76,7 +76,7 @@ class TeacherServiceTest {
 
     @Test
     void markingNeedsTheTeacherAtTheAcademyAndOpensShortlyBeforeTheClass() {
-        TeacherService s = at("2026-11-04T15:00");   // Wednesday; Kids 1 is at 3:30 PM
+        TeacherService s = at("2026-11-04T15:15");   // Wednesday; Kids 1 is at 3:30 PM, open from 3:15
         s.saveSetup(new TeacherService.SetupInput(null, null, null, new Site(LAT, LNG, 150, 45, 15)));
 
         assertThatThrownBy(() -> s.checkIn("ijini", new CheckIn("wed-1530-kids", 6.95, 79.86, 20.0)))
@@ -84,13 +84,28 @@ class TeacherServiceTest {
         assertThatThrownBy(() -> s.checkIn("ijini", new CheckIn("wed-1800-junior", LAT, LNG, 10.0)))
                 .hasMessageContaining("not on today's timetable");
         assertThatThrownBy(() -> s.checkIn("ijini", new CheckIn("wed-1815-adult", LAT, LNG, 10.0)))
-                .hasMessageContaining("opens at 5:30 PM");
+                .hasMessageContaining("opens at 6:00 PM");          // 15 minutes before 6:15
 
         s.checkIn("ijini", new CheckIn("wed-1530-kids", LAT + 0.0005, LNG, 15.0));   // ~55 m away
         assertThat(state(s, "wed-1530-kids")).isEqualTo(SlotState.COMPLETE);
         // marking twice keeps one mark
         s.checkIn("ijini", new CheckIn("wed-1530-kids", LAT, LNG, 15.0));
         assertThat(line(s, "ijini").weekday()).isEqualTo(1);
+    }
+
+    @Test
+    void markingOpensFifteenMinutesBeforeTheClassAndStaysOpenUntilMidnight() {
+        // the Setup's own "opens before" minutes no longer matter: always 15
+        at("2026-11-04T10:00").saveSetup(new TeacherService.SetupInput(null, null, null, new Site(LAT, LNG, 150, 120, 15)));
+        assertThatThrownBy(() -> at("2026-11-04T15:14").checkIn("ijini", new CheckIn("wed-1530-kids", LAT, LNG, 10.0)))
+                .hasMessageContaining("opens at 3:15 PM");
+        at("2026-11-04T15:15").checkIn("ijini", new CheckIn("wed-1530-kids", LAT, LNG, 10.0));
+        at("2026-11-04T23:59").checkIn("ijini", new CheckIn("wed-1815-adult", LAT, LNG, 10.0));
+        TeacherService late = at("2026-11-04T23:59");
+        assertThat(late.me("ijini").today()).filteredOn(c -> c.state() == SlotState.COMPLETE).hasSize(2);
+        // undo works until midnight too
+        late.unmark("ijini", new Unmark("wed-1815-adult"));
+        assertThat(state(late, "wed-1815-adult")).isEqualTo(SlotState.OPEN);
     }
 
     @Test

@@ -354,8 +354,8 @@
         <!-- location -->
         <div class="card">
           <div class="card-head"><h2 data-ico="📍" data-tone="blue">Academy location</h2></div>
-          <p class="hint">Teachers can only check in within this distance of the academy, and only from
-            {{ s.site.earlyMinutes }} minutes before a class until {{ s.site.lateMinutes }} minutes after it ends.
+          <p class="hint">Teachers can only mark a class within this distance of the academy, from
+            <b>15 minutes before it starts until midnight</b> that day (and undo their own mark until midnight).
             Easiest: stand inside the academy with your phone and tap <b>Use where I am now</b>.</p>
           @if (s.site.lat == null) { <p class="hint warn">Not set yet — teachers cannot check in until it is.</p> }
           <div class="grid-2">
@@ -365,15 +365,9 @@
               <input type="number" step="0.000001" placeholder="79.8612" [ngModel]="s.site.lng" (ngModelChange)="patchSite({ lng: $event })"></label>
             <label class="field"><span>Allowed distance (metres)</span>
               <input type="number" min="20" step="10" [ngModel]="s.site.radius" (ngModelChange)="patchSite({ radius: $event })"></label>
-            <label class="field"><span>Opens before a class (minutes)</span>
-              <input type="number" min="0" step="5" [ngModel]="s.site.earlyMinutes" (ngModelChange)="patchSite({ earlyMinutes: $event })"></label>
-            <label class="field"><span>Check-in stays open after it ends (minutes)</span>
-              <input type="number" min="0" step="5" [ngModel]="s.site.lateMinutes" (ngModelChange)="patchSite({ lateMinutes: $event })"></label>
-            <label class="field"><span>"Class done" open after it ends (minutes)</span>
-              <input type="number" min="0" step="5" [ngModel]="s.site.doneMinutes" (ngModelChange)="patchSite({ doneMinutes: $event })"></label>
           </div>
-          <p class="hint">After each class the teacher taps <b>Class done</b> (from 10 minutes before it ends) to confirm they taught it,
-            with a note on what they covered. A class not marked done shows <b>📍 not done</b> on the Attendance tab — tap it to confirm it yourself.</p>
+          <p class="hint">Teachers tap <b>Mark attended</b> and confirm they taught the class. A class they missed marking
+            can be ticked by you on the Attendance tab, for any day.</p>
           <footer class="tc-save">
             <button type="button" class="btn" [disabled]="locating()" (click)="useHere()">{{ locating() ? 'Finding…' : '📍 Use where I am now' }}</button>
             @if (s.site.lat != null) { <a class="btn btn-ghost" [href]="mapLink(s.site)" target="_blank">View on map</a> }
