@@ -1,0 +1,301 @@
+<section class="rl">
+
+  <!-- ============ the day (and, for the office, the month) ============ -->
+  <div class="rl-bar">
+    @if (teacher) {
+      <div class="rl-today"><b>Student attendance</b><small>{{ day()?.label }}</small></div>
+    } @else {
+      <div class="rl-datebar">
+        <button type="button" class="btn-round" (click)="shiftDay(-1)" title="Previous day">‹</button>
+        <label class="rl-date">
+          <b>{{ day()?.label || 'Loading…' }}</b>
+          <input type="date" [value]="date()" (change)="setDate($any($event.target).value)" aria-label="Pick a day">
+        </label>
+        <button type="button" class="btn-round" (click)="shiftDay(1)" title="Next day">›</button>
+        @if (day() && !day()!.today) { <button type="button" class="btn btn-sm" (click)="goToday()">Today</button> }
+      </div>
+      <div class="rl-tabs" role="tablist">
+        <button type="button" role="tab" [class.is-on]="tab() === 'day'" (click)="setTab('day')">✋ Register</button>
+        <button type="button" role="tab" [class.is-on]="tab() === 'month'" (click)="setTab('month')">📅 Month</button>
+      </div>
+    }
+  </div>
+
+  @if (tab() === 'day') {
+    @if (day(); as d) {
+      @if (d.holiday?.classOff) {
+        <div class="rl-holiday">🚫 <b>{{ d.holiday!.name }}</b> — no classes today.</div>
+      }
+
+      <!-- ============ cover-ups this month (office) ============ -->
+      @if (!teacher && makeups().length) {
+        <div class="rl-mu">
+          <button type="button" class="rl-mu-toggle" (click)="showMakeups.set(!showMakeups())" [attr.aria-expanded]="showMakeups()">
+            <span>↻ Cover-up classes this month</span>
+            <b>{{ makeups().length }}</b>
+            <i>{{ showMakeups() ? 'Hide' : 'Show' }}</i>
+          </button>
+          @if (showMakeups()) {
+            <ul class="rl-mu-list">
+              @for (m of makeups(); track m.id) {
+                <li [class]="'mu-' + m.status">
+                  <div class="rl-mu-who"><b>{{ m.studentName }}</b><small>{{ m.category }}{{ m.note ? ' · ' + m.note : '' }}</small></div>
+                  <div class="rl-mu-path">
+                    <button type="button" class="link" (click)="goTo(m.fromDate, m.fromSession)">missed {{ m.fromLabel }}</button>
+                    <span>→</span>
+                    <button type="button" class="link" (click)="goTo(m.toDate, m.toSession)">{{ m.toLabel }}</button>
+                  </div>
+                  <span class="rl-mu-state">{{ m.status === 'attended' ? '✓ Made up' : m.status === 'missed' ? '✕ Did not come' : 'Booked' }}</span>
+                  <button type="button" class="btn-icon danger" (click)="cancelMakeup(m.id, m.studentName)" title="Cancel this cover-up">✕</button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+
+      <!-- ============ today's classes, in time order ============ -->
+      @if (d.classes.length) {
+        <div class="rl-strip" role="tablist" aria-label="Classes">
+          @for (c of d.classes; track c.session.name) {
+            <button type="button" role="tab" class="rl-chip" [style.--c]="colour(c.session.category)"
+                    [class.is-on]="current()?.session?.name === c.session.name" [class]="'rl-chip st-' + c.state"
+                    (click)="pick(c)">
+              <span class="rl-chip-time">{{ startLabel(c) }}</span>
+              <b>{{ c.session.name }}</b>
+              <small>
+                @switch (c.state) {
+                  @case ('now') { <i class="rl-live"></i>Now }
+                  @case ('next') { Next }
+                  @default { {{ c.session.category }} }
+                }
+                · {{ c.students.length - c.unmarked }}/{{ c.students.length }}
+              </small>
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="rl-empty">
+          <span>🌿</span>
+          <b>No classes on {{ d.label.split(',')[0] }}</b>
+          @if (!teacher) { <small>Pick another day above.</small> }
+        </div>
+      }
+
+      <!-- ============ the register ============ -->
+      @if (current(); as c) {
+        <article class="rl-class" [style.--c]="colour(c.session.category)">
+          <header class="rl-head">
+            <span class="rl-sym" [class.italic]="c.session.symbolStyle === 'italic'">{{ c.session.symbol || c.session.name.charAt(0) }}</span>
+            <div class="rl-title">
+              <h2>{{ c.session.name }}</h2>
+              <small>{{ c.session.meaning }}</small>
+              <p>{{ c.session.category }} class · {{ c.session.day }} {{ c.time }}</p>
+            </div>
+            @if (c.state === 'now') { <span class="rl-badge now"><i class="rl-live"></i>On now</span> }
+            @else if (c.state === 'next') { <span class="rl-badge">Next</span> }
+          </header>
+
+          <div class="rl-counts" [class.five]="c.madeUp > 0">
+            <div class="rl-count p"><b>{{ c.present }}</b><small>present</small></div>
+            @if (c.madeUp > 0) { <div class="rl-count mu"><b>{{ c.madeUp }}</b><small>made up</small></div> }
+            <div class="rl-count l"><b>{{ c.late }}</b><small>late</small></div>
+            <div class="rl-count a"><b>{{ c.absent }}</b><small>absent</small></div>
+            <div class="rl-count u"><b>{{ c.unmarked }}</b><small>to mark</small></div>
+          </div>
+          <div class="rl-progress"><span [style.width.%]="percent(c)"></span></div>
+          <p class="rl-by">
+            @if (c.markedBy) { ✍️ Marked by <b>{{ c.markedBy }}</b> · {{ time(c.markedAt) }} }
+            @else if (c.students.length) { Nobody has taken this register yet. }
+          </p>
+
+          @if (c.unmarked > 0 && c.students.length && !d.holiday?.classOff) {
+            <button type="button" class="rl-allp" [disabled]="bulk()" (click)="allPresent(c)">
+              {{ bulk() ? 'Marking…' : '✓ Mark the rest present (' + c.unmarked + ')' }}</button>
+            <p class="rl-tip">Then tap anyone who is <b>late</b> or <b>absent</b>. Tap a mark again to clear it.</p>
+          }
+
+          <ol class="rl-list">
+            @for (s of regulars(); track s.id; let i = $index) {
+              <ng-container *ngTemplateOutlet="row; context: { $implicit: s, i: i, c: c, d: d }" />
+            } @empty {
+              <li class="rl-none">No students in {{ c.session.name }} yet — add them on the Students page.</li>
+            }
+          </ol>
+
+          <!-- students from other sessions, here to make up a class they missed -->
+          @if (visitors().length) {
+            <h3 class="rl-visit-head">↻ Cover-up students <small>{{ visitors().length }} here to make up a missed class</small></h3>
+            <ol class="rl-list visit">
+              @for (s of visitors(); track s.id; let i = $index) {
+                <ng-container *ngTemplateOutlet="row; context: { $implicit: s, i: i, c: c, d: d }" />
+              }
+            </ol>
+          }
+        </article>
+      }
+    } @else {
+      <p class="rl-loading">Loading today's classes…</p>
+    }
+  }
+
+  <!-- ============ the month register (office) ============ -->
+  @if (tab() === 'month') {
+    <div class="card rl-month">
+      <div class="rl-month-bar">
+        <select [value]="monthSession()" (change)="setMonthSession($any($event.target).value)" aria-label="Class">
+          @for (s of month()?.sessions ?? storeSessions(); track s.name) {
+            <option [value]="s.name" [selected]="s.name === monthSession()">{{ s.day.slice(0, 3) }} · {{ s.name }} ({{ s.category }})</option>
+          }
+        </select>
+        <div class="rl-month-nav">
+          <button type="button" class="btn-round" (click)="shiftMonth(-1)">‹</button>
+          <b>{{ month()?.label }}</b>
+          <button type="button" class="btn-round" (click)="shiftMonth(1)">›</button>
+        </div>
+        <button type="button" class="btn btn-sm" (click)="print()">🖨️ Print</button>
+      </div>
+      @if (month(); as m) {
+        <div class="rl-sheet" [style.--c]="colour(m.session.category)">
+          <header class="rl-sheet-head">
+            <span class="rl-sym" [class.italic]="m.session.symbolStyle === 'italic'">{{ m.session.symbol || m.session.name.charAt(0) }}</span>
+            <div><h2>{{ m.session.name }}</h2><small>{{ m.session.meaning }}</small></div>
+            <div class="rl-sheet-when"><b>{{ m.session.category }} class</b><span>{{ m.session.day }} · {{ m.session.time }}</span><span>{{ m.label }}</span></div>
+          </header>
+          <div class="table-scroll">
+            <table class="rl-grid">
+              <thead>
+                <tr>
+                  <th>No</th><th class="nm">Student</th>
+                  @for (d of m.dates; track d.date) {
+                    <th class="dt" [class.future]="d.future" [class.hol]="d.holiday">
+                      <button type="button" (click)="openDay(d.date)" [disabled]="d.future" [title]="d.markedBy ? 'Marked by ' + d.markedBy : 'Open this day'">{{ d.label }}</button>
+                    </th>
+                  }
+                  <th>%</th><th class="rm">Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of m.rows; track r.id; let i = $index) {
+                  <tr [class.left]="r.left">
+                    <td class="no">{{ i + 1 }}</td>
+                    <td class="nm">{{ r.name }}</td>
+                    @for (cell of r.cells; track cell.date) {
+                      <td class="cell" [class]="'cell m-' + (cell.status || 'none')" [title]="cell.note || ''">{{ label(cell.status) }}</td>
+                    }
+                    <td class="pct" [class.low]="r.rate !== null && r.rate < 75">{{ r.rate === null ? '' : r.rate + '%' }}</td>
+                    <td class="rm">@for (cell of r.cells; track cell.date) { @if (cell.note) { <span>{{ cell.note }}</span> } }</td>
+                  </tr>
+                } @empty {
+                  <tr><td [attr.colspan]="m.dates.length + 4" class="empty">No students in this class.</td></tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td></td><td class="nm">Marked by</td>
+                  @for (d of m.dates; track d.date) { <td class="by">{{ d.holiday ? 'holiday' : d.markedBy || '' }}</td> }
+                  <td></td><td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p class="rl-key"><b>Key:</b> P = present · ab = absent · L = late · % counts late as attended. Tap a date to correct that day.</p>
+        </div>
+      }
+    </div>
+  }
+</section>
+
+<!-- ============ one student's line in a register ============ -->
+<ng-template #row let-s let-i="i" let-c="c" let-d="d">
+  <li class="rl-row" [class]="'rl-row m-' + (s.status || 'none')" [class.left]="s.left" [class.busy]="isSaving(s.id)" [class.visit]="!!s.coverFor">
+    <span class="rl-no">{{ i + 1 }}</span>
+    <div class="rl-name">
+      <b>{{ s.name }}</b>
+      @if (s.cover; as cv) {
+        <!-- where this cover-up student comes from -->
+        <div class="rl-from" [style.--h]="colour(cv.category)">
+          <span class="rl-from-sym" [class.italic]="cv.symbolStyle === 'italic'">{{ cv.symbol || cv.session.charAt(0) }}</span>
+          <div class="rl-from-text">
+            <span class="rl-from-tag">↻ Cover-up from</span>
+            <b>{{ cv.session }} <i>{{ cv.category }} class</i></b>
+            <span class="rl-from-line">🗓️ Usually {{ cv.day }} · {{ cv.time }}</span>
+            <span class="rl-from-line">✕ Missed <b>{{ cv.missedLabel }}</b></span>
+            @if (cv.reason) { <span class="rl-from-line">💬 {{ cv.reason }}</span> }
+            <span class="rl-from-meta">{{ cv.studentNumber }}@if (cv.parent) { · {{ cv.parent }} }@if (cv.phone) { · <a [href]="'tel:' + cv.phone">{{ cv.phone }}</a> } · booked by {{ cv.bookedBy }}</span>
+          </div>
+        </div>
+      }
+      @if (s.makeupNote) {
+        <small class="rl-cu" [class]="'rl-cu mu-' + s.makeupStatus">↻ {{ s.makeupNote }}
+          @if (!teacher) { <button type="button" class="rl-cu-x" (click)="cancelMakeup(s.makeupId, s.name)" aria-label="Cancel the cover-up">✕</button> }
+        </small>
+      }
+      @if (s.note && s.note !== s.makeupNote && noteOpen() !== s.id) { <small class="rl-note-text">📝 {{ s.note }}</small> }
+      @if (s.left) { <small>no longer in this class</small> }
+      @if (!teacher && !s.coverFor && !s.makeupId && noteOpen() !== s.id) {
+        <button type="button" class="rl-remark-link" (click)="noteOpen.set(s.id)">{{ s.note ? '✎ edit remark' : '+ remark' }}</button>
+      }
+    </div>
+    <div class="rl-marks" role="group" [attr.aria-label]="'Mark ' + s.name">
+      <button type="button" class="mk p" [class.on]="s.status === 'P'" [disabled]="d.holiday?.classOff" (click)="mark(c, s, 'P')" title="Present">P</button>
+      <button type="button" class="mk l" [class.on]="s.status === 'L'" [disabled]="d.holiday?.classOff" (click)="mark(c, s, 'L')" title="Late">L</button>
+      <button type="button" class="mk a" [class.on]="s.status === 'A'" [disabled]="d.holiday?.classOff" (click)="mark(c, s, 'A')" title="Absent">ab</button>
+      @if (!teacher && !s.coverFor && !s.makeupId) {
+        <button type="button" class="mk cu" (click)="openBooking(c, s)" title="Book a cover-up class for a missed class">↻</button>
+      } @else {
+        <button type="button" class="mk n" [class.on]="!!s.note" (click)="noteOpen.set(noteOpen() === s.id ? '' : s.id)" title="Remark">✎</button>
+      }
+    </div>
+    @if (noteOpen() === s.id) {
+      <form class="rl-note" (submit)="$event.preventDefault(); saveNote(c, s, noteBox.value)">
+        <input #noteBox type="text" maxlength="200" placeholder="Remark — e.g. came at 12, sick, left early"
+               [value]="s.note || ''" autofocus>
+        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+      </form>
+    }
+  </li>
+</ng-template>
+
+<!-- ============ booking a cover-up class ============ -->
+@if (booking(); as b) {
+  <div class="sheet-backdrop" (click)="closeBooking()"></div>
+  <aside class="sheet rl-book" role="dialog" aria-modal="true" aria-label="Book a cover-up class">
+    <header class="sheet-head">
+      <div><h2>Cover-up class</h2><small>{{ b.student.name }} · misses {{ b.from.session.name }} on {{ prettyDay(b.date) }}</small></div>
+      <button type="button" class="btn-icon" (click)="closeBooking()" aria-label="Close">✕</button>
+    </header>
+    <div class="sheet-body">
+      @if (booked(); as bk) {
+        <p class="rl-done-head">✅ Cover-up booked</p>
+        <label class="field"><span>Message to {{ bk.parent || 'the parent' }}@if (bk.phone) { <em>· {{ bk.phone }}</em> }</span>
+          <textarea rows="11" class="rl-done-text" [value]="bk.text" (input)="booked.set({ name: bk.name, parent: bk.parent, phone: bk.phone, text: $any($event.target).value })"></textarea></label>
+        <div class="rl-done-act">
+          <button type="button" class="btn btn-wa" (click)="copyMsg(bk.text)">📋 Copy message</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" (click)="closeBooking()">Done</button>
+        </div>
+        @if (!bk.phone) { <p class="hint warn">No WhatsApp number on file — WhatsApp will ask you to pick the chat.</p> }
+      } @else {
+      <p class="rl-book-lead">Pick the class {{ b.student.name.split(' ')[0] }} will come to instead. They appear in that class's
+        register, and when they are marked there, <b>{{ b.from.session.name }}</b> is marked <b>made up</b>.</p>
+      <label class="field"><span>Reason <em>(optional)</em></span>
+        <input type="text" maxlength="200" placeholder="e.g. family trip, school exam" [value]="bookNote()" (input)="bookNote.set($any($event.target).value)"></label>
+      <label class="check"><input type="checkbox" [checked]="bookAll()" (change)="bookAll.set(!bookAll())">
+        <span>Show other classes too (not only {{ b.from.session.category }})</span></label>
+      <div class="rl-book-list">
+        @for (o of bookOptions(); track o.session.name + o.date) {
+          <button type="button" class="rl-book-opt" [style.--c]="colour(o.session.category)" [disabled]="bulk()" (click)="book(o)">
+            <span class="rl-book-date"><b>{{ o.label.split(' ')[0] }}</b>{{ o.label.split(' ').slice(1).join(' ') }}</span>
+            <span class="rl-book-what"><b>{{ o.session.name }}</b><small>{{ o.session.category }} · {{ o.session.time }}</small></span>
+            <span class="rl-book-free" [class.full]="o.free !== null && o.free <= 0">
+              {{ o.free === null ? '' : o.free <= 0 ? 'Full' : o.free + ' free' }}</span>
+          </button>
+        } @empty {
+          <p class="hint">No other {{ b.from.session.category }} sessions. Tick "Show other classes too".</p>
+        }
+      </div>
+      }
+    </div>
+  </aside>
+}

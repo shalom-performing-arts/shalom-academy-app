@@ -1,0 +1,20 @@
+# ---- never in git: the academy's data and passwords ----
+backend/data/
+backend/data-backup-*/
+*.xlsx
+*.csv
+samples/
+
+# ---- built or downloaded, made again on every build ----
+node_modules/
+.angular/
+dist/
+target/
+*.log
+
+# ---- editors ----
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

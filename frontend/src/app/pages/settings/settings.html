@@ -1,0 +1,278 @@
+@let st = s();
+<section class="panel">
+  <div class="layout even">
+    <div class="col-form">
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="🏫" data-tone="rose">Academy details</h2></div>
+        <label class="field"><span>Name</span>
+          <input type="text" [ngModel]="st.academyName" (ngModelChange)="setText('academyName', $event)"></label>
+        <label class="field"><span>Tagline</span>
+          <input type="text" [ngModel]="st.tagline" (ngModelChange)="setText('tagline', $event)"></label>
+        <label class="field"><span>Motto <em>(under the academy name)</em></span>
+          <input type="text" [ngModel]="st.motto" (ngModelChange)="setText('motto', $event)"></label>
+        <label class="field"><span>Address</span>
+          <input type="text" [ngModel]="st.address" (ngModelChange)="setText('address', $event)"></label>
+        <div class="grid-2">
+          <label class="field"><span>Phone</span>
+            <input type="text" [ngModel]="st.phone" (ngModelChange)="setText('phone', $event)"></label>
+          <label class="field"><span>WhatsApp</span>
+            <input type="text" [ngModel]="st.whatsapp" (ngModelChange)="setText('whatsapp', $event)"></label>
+        </div>
+        <label class="field"><span>Email / website</span>
+          <input type="text" [ngModel]="st.email" (ngModelChange)="setText('email', $event)"></label>
+        <label class="field"><span>Footer note</span>
+          <input type="text" [ngModel]="st.footer" (ngModelChange)="setText('footer', $event)"></label>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="✍️" data-tone="violet">Logo &amp; signature</h2></div>
+        <p class="hint">Taken from <code>logo.png</code> and <code>signature.png</code> in the app's
+          <code>public</code> folder. Upload here only to override them — the upload is saved on the
+          server, so every device uses it.</p>
+        <div class="grid-2">
+          <div class="field">
+            <span>Logo</span>
+            <div class="img-slot"><img [src]="st.logo || SITE_LOGO" alt=""></div>
+            <div class="row-gap">
+              <label class="btn btn-sm">Upload<input #logoFile type="file" accept="image/*" hidden
+                (change)="upload('logo', logoFile)"></label>
+              <button type="button" class="btn btn-sm btn-ghost" [disabled]="!st.logo"
+                      (click)="setText('logo', '')">Use logo.png</button>
+            </div>
+          </div>
+          <div class="field">
+            <span>Signature</span>
+            <div class="img-slot"><img [src]="st.signature || SITE_SIGNATURE" alt=""></div>
+            <div class="row-gap">
+              <label class="btn btn-sm">Upload<input #signFile type="file" accept="image/*" hidden
+                (change)="upload('signature', signFile)"></label>
+              <button type="button" class="btn btn-sm btn-ghost" [disabled]="!st.signature"
+                      (click)="setText('signature', '')">Use signature.png</button>
+            </div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <label class="field"><span>Signatory name</span>
+            <input type="text" placeholder="e.g. Rebeccah Shalom" [ngModel]="st.signName" (ngModelChange)="setText('signName', $event)"></label>
+          <label class="field"><span>Signatory title</span>
+            <input type="text" [ngModel]="st.signTitle" (ngModelChange)="setText('signTitle', $event)"></label>
+        </div>
+        <label class="field">
+          <span>Signature on the receipt</span>
+          <select [ngModel]="st.signStyle" (ngModelChange)="set('signStyle', $event)">
+            <option value="typed">The signatory's name in script</option>
+            <option value="image">The signature image</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="🎨" data-tone="rose">Receipt style</h2></div>
+        <label class="field">
+          <span>Design</span>
+          <select [ngModel]="st.theme" (ngModelChange)="set('theme', $event)">
+            <option value="monthly">Monthly florals — a different colour and flower each month</option>
+            <option value="classic">Classic — plum and gold on white</option>
+          </select>
+        </label>
+        <p class="hint"><b>Monthly florals</b> follows the <b>fee month</b> on the receipt: twelve
+          palettes and twelve flowers, from white roses in January to poinsettias in December.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="🔢" data-tone="blue">Receipt number &amp; currency</h2></div>
+        <div class="grid-2">
+          <label class="field"><span>Prefix</span>
+            <input type="text" placeholder="SAPA" [ngModel]="st.prefix" (ngModelChange)="setText('prefix', $event)"></label>
+          <label class="field"><span>Pattern</span>
+            <select [ngModel]="st.numFormat" (ngModelChange)="set('numFormat', $event)">
+              <option value="datetime">PREFIX-20261020-153045 (date + time)</option>
+              <option value="compact">PREFIX-261020153045 (compact)</option>
+              <option value="epoch">PREFIX-1792591845 (seconds)</option>
+            </select>
+          </label>
+        </div>
+        <p class="hint">The number is taken from the date and time down to the second, and the
+          server refuses a number that is already used.</p>
+        <div class="grid-2">
+          <label class="field"><span>Currency code</span>
+            <input type="text" placeholder="LKR" [ngModel]="st.currency" (ngModelChange)="setText('currency', $event)"></label>
+          <label class="field"><span>Currency in words</span>
+            <input type="text" placeholder="Rupees" [ngModel]="st.currencyWord" (ngModelChange)="setText('currencyWord', $event)"></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="💬" data-tone="green">Sending on WhatsApp</h2></div>
+        <label class="field"><span>Country code <em>(added to local numbers: 071… becomes +94 71…)</em></span>
+          <input type="text" inputmode="numeric" placeholder="94" [ngModel]="st.countryCode" (ngModelChange)="setText('countryCode', $event)"></label>
+        <label class="field"><span>Message sent with the receipt</span>
+          <textarea rows="6" [ngModel]="st.whatsappMessage" (ngModelChange)="setText('whatsappMessage', $event)"></textarea></label>
+        <p class="hint">Filled in for each receipt: <code>{{ '{' }}parent{{ '}' }}</code> <code>{{ '{' }}student{{ '}' }}</code> <code>{{ '{' }}period{{ '}' }}</code>
+          <code>{{ '{' }}total{{ '}' }}</code> <code>{{ '{' }}number{{ '}' }}</code> <code>{{ '{' }}academy{{ '}' }}</code>. It can still be changed before sending.
+          Students' numbers are kept on the Students page; an online student abroad needs the number with its own
+          code, e.g. <code>+44 7700 900123</code>.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="🏦" data-tone="blue">Paid to</h2></div>
+        <p class="hint">Where money can go — the choices in the <b>Paid to</b> dropdown on the Payments
+          page and on receipts. The first is the usual one.</p>
+        <app-list-editor [items]="st.paidToOptions" noun="Paid to option" firstLabel="Usual"
+                         placeholder="Add another, e.g. a second bank account" (changed)="set('paidToOptions', $event)" />
+        <p class="hint">Renaming one does not change payments already recorded under the old name.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="💳" data-tone="violet">Payment methods</h2></div>
+        <p class="hint">How a parent paid — printed on the receipt as <b>Paid by</b>. A method containing
+          the word “Cash” sets <b>Paid to</b> to your cash option.</p>
+        <app-list-editor [items]="st.paymentMethods" noun="Payment method" firstLabel="Usual"
+                         placeholder="Add another, e.g. LankaQR" (changed)="set('paymentMethods', $event)" />
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="🏷️" data-tone="amber">Fee types</h2></div>
+        <p class="hint">What a payment can be for. <b>Monthly fee</b> is the class fee the Payments page
+          tracks; the rest count as extra income. A default amount is filled in when the type is picked.</p>
+        <div class="ft-list">
+          @for (t of st.feeTypes; track $index; let i = $index) {
+            <div class="ft-row">
+              <input type="text" [value]="t.name" (change)="patchFeeType(i, { name: $any($event.target).value })"
+                     [attr.aria-label]="'Fee type ' + (i + 1)">
+              @if (t.id === 'monthly') {
+                <span class="ft-note">from each student’s fee</span>
+              } @else {
+                <span class="fee-amt ft-amt"><span class="cur">{{ st.currency || 'LKR' }}</span>
+                  <input type="number" min="0" step="any" placeholder="no default" [value]="t.defaultAmount ?? ''"
+                         (change)="patchFeeType(i, { defaultAmount: amount($any($event.target).value) })" aria-label="Default amount"></span>
+              }
+              @if (t.id === 'monthly' || t.id === 'admission') {
+                <span class="ft-badge">built in</span>
+              } @else {
+                <button type="button" class="btn-icon danger" (click)="removeFeeType(i)">Remove</button>
+              }
+            </div>
+          }
+        </div>
+        <div class="with-btn">
+          <input #newType type="text" placeholder="Add a fee type, e.g. Exam fee"
+                 (keydown.enter)="$event.preventDefault(); addFeeType(newType)">
+          <button type="button" class="btn btn-sm" (click)="addFeeType(newType)">Add</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="👨‍👩‍👧" data-tone="rose">Sibling discount</h2></div>
+        <label class="switch big"><input type="checkbox" [checked]="st.siblingDiscount.enabled"
+               (change)="patchDiscount({ enabled: $any($event.target).checked })"><span></span>
+          {{ st.siblingDiscount.enabled ? 'On — brothers and sisters get a discount' : 'Off' }}</label>
+        @if (st.siblingDiscount.enabled) {
+          <div class="grid-2">
+            <label class="field"><span>Discount</span>
+              <input type="number" min="0" step="any" [value]="st.siblingDiscount.value"
+                     (change)="patchDiscount({ value: amount($any($event.target).value) ?? 0 })"></label>
+            <label class="field"><span>As</span>
+              <select [ngModel]="st.siblingDiscount.type" (ngModelChange)="patchDiscount({ type: $event })">
+                <option value="percent">% off the class fee</option>
+                <option value="amount">{{ st.currency || 'LKR' }} off the class fee</option>
+              </select></label>
+          </div>
+        }
+        <p class="hint">Students with the same <b>Family</b> (on the Students page) are siblings. The child on
+          the highest fee pays in full; each brother or sister gets the discount. Anyone on a special fee keeps
+          their own fee. Changes reach the newest month for anyone who hasn’t paid in it yet.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="📝" data-tone="teal">Student fields</h2></div>
+        <p class="hint">Extra details to keep for every student — school, date of birth, instrument,
+          emergency contact … They appear in the student editor and in the students export.</p>
+        @if (st.studentFields.length) {
+          <div class="sf-list">
+            @for (f of st.studentFields; track $index; let i = $index) {
+              <div class="sf-row">
+                <input type="text" [value]="f.label" (change)="patchField(i, { label: $any($event.target).value })" aria-label="Field name">
+                <select [ngModel]="f.type" (ngModelChange)="patchField(i, { type: $event })" aria-label="Kind of field">
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="date">Date</option>
+                  <option value="phone">Phone</option>
+                  <option value="select">Choice from a list</option>
+                </select>
+                <label class="switch" title="Show on the Students page rows"><input type="checkbox" [checked]="f.inList"
+                       (change)="patchField(i, { inList: $any($event.target).checked })"><span></span>In list</label>
+                <button type="button" class="btn-icon danger" (click)="removeField(i)">Remove</button>
+                @if (f.type === 'select') {
+                  <input class="sf-options" type="text" placeholder="Choices, separated by commas — e.g. Guitar, Ukulele, Piano"
+                         [value]="f.options.join(', ')" (change)="patchField(i, { options: splitList($any($event.target).value) })">
+                }
+              </div>
+            }
+          </div>
+        }
+        <div class="with-btn">
+          <input #newField type="text" placeholder="Add a field, e.g. School"
+                 (keydown.enter)="$event.preventDefault(); addField(newField)">
+          <button type="button" class="btn btn-sm" (click)="addField(newField)">Add</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="🎸" data-tone="violet">Courses on the receipt</h2></div>
+        <label class="field">
+          <span>Courses <em>(one per line — <code>Course name | default monthly fee</code>)</em></span>
+          <textarea rows="5" [ngModel]="classesText()" (ngModelChange)="setClasses($event)"></textarea>
+        </label>
+        <p class="hint">Picking a course fills the monthly fee with its default — you can still type over it.
+          The admission fee’s default is under <b>Fee types</b>.</p>
+      </div>
+    </div>
+
+    <div class="col-form">
+      <div class="card">
+        <div class="card-head"><h2 data-ico="📋" data-tone="blue">Student roster</h2></div>
+        <p class="hint">Add, move and edit students on the <a routerLink="/students">Students</a> page.
+          If <code>backend/data/students.json</code> was edited by hand, reload it here.</p>
+        <div class="row-gap">
+          <button type="button" class="btn btn-sm" (click)="reloadRoster()">Reload students</button>
+        </div>
+        <p class="hint" [class.warn]="store.rosterError()">
+          {{ store.rosterError() || (store.students().length + ' students on the server.') }}</p>
+        <input type="search" class="search" placeholder="Filter roster…" style="margin-bottom:8px"
+               [value]="rosterQuery()" (input)="rosterQuery.set($any($event.target).value)">
+        <div class="table-scroll short">
+          <table class="list">
+            <thead><tr><th>Name</th><th>ID</th><th>Category</th><th>Day</th><th>Time</th></tr></thead>
+            <tbody>
+              @for (r of roster(); track r.name) {
+                <tr><td>{{ r.name }}</td><td>{{ r.id }}</td><td>{{ r.category }}</td><td>{{ r.day }}</td><td>{{ r.time }}</td></tr>
+              } @empty {
+                <tr><td colspan="5" class="empty">No matching students.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2 data-ico="💾" data-tone="teal">Backup</h2></div>
+        <p class="hint">Settings and receipts are kept on the server, so every device sees the same
+          ones. A backup is still worth keeping. <b>Restore</b> also accepts a backup exported from
+          the old browser-only app — that is how its receipts move onto the server.</p>
+        <div class="row-gap">
+          <button type="button" class="btn btn-sm" (click)="exportBackup()">Export backup (JSON)</button>
+          <label class="btn btn-sm">Restore backup<input #backupFile type="file" accept=".json" hidden
+            (change)="restore(backupFile)"></label>
+        </div>
+      </div>
+
+      <div class="card danger">
+        <div class="card-head"><h2 data-ico="⚠️" data-tone="red">Danger zone</h2></div>
+        <p class="hint">Deletes every saved receipt on the server. Export a backup first.</p>
+        <button type="button" class="btn btn-sm btn-danger" (click)="wipe()">Delete all receipts</button>
+      </div>
+    </div>
+  </div>
+</section>

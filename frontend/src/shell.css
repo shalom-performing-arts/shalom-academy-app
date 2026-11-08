@@ -1,0 +1,375 @@
+/* =========================================================
+   App shell: the side menu, the top bar and the sign-in screen.
+   Computers: the menu is docked on the left and can shrink to its icons.
+   Phones and tablets (≤ 900px): it slides in from the left, from the
+   menu button or a swipe from the screen edge.
+   ========================================================= */
+
+:root{
+  --side-w:276px;
+  --side-w-mini:84px;
+  --side-bg:linear-gradient(170deg, #2a0f3c 0%, #451543 42%, #74204f 100%);
+
+  /* one colour per section, used for its icon in the menu and the top bar */
+  --tone-rose:linear-gradient(135deg, #ff6b9a, #d6336c);
+  --tone-green:linear-gradient(135deg, #34d399, #0f9f6e);
+  --tone-blue:linear-gradient(135deg, #60a5fa, #3567e8);
+  --tone-amber:linear-gradient(135deg, #fbbf24, #f07c12);
+  --tone-violet:linear-gradient(135deg, #c084fc, #7c3aed);
+}
+
+body{
+  background:
+    radial-gradient(1200px 500px at 100% -10%, rgba(192,132,252,.16), transparent 60%),
+    radial-gradient(900px 420px at 20% -20%, rgba(255,107,154,.12), transparent 60%),
+    #f6f3f9;
+  background-attachment:fixed;
+}
+
+[data-tone=rose]   .side-ico, .topbar-ico[data-tone=rose]  {background:var(--tone-rose)}
+[data-tone=green]  .side-ico, .topbar-ico[data-tone=green] {background:var(--tone-green)}
+[data-tone=blue]   .side-ico, .topbar-ico[data-tone=blue]  {background:var(--tone-blue)}
+[data-tone=amber]  .side-ico, .topbar-ico[data-tone=amber] {background:var(--tone-amber)}
+[data-tone=violet] .side-ico, .topbar-ico[data-tone=violet]{background:var(--tone-violet)}
+
+/* ---------- layout ---------- */
+.shell{display:grid; grid-template-columns:var(--side-w) minmax(0, 1fr); min-height:100vh; transition:grid-template-columns .25s ease}
+.stage{min-width:0; display:flex; flex-direction:column}
+.stage > main{padding:22px 26px 32px; width:100%; max-width:1500px; margin:0 auto}
+
+/* ---------- side menu ---------- */
+.sidenav{
+  position:sticky; top:0; height:100vh; z-index:30;
+  display:flex; flex-direction:column; gap:6px;
+  padding:18px 14px 14px; overflow:hidden auto; overscroll-behavior:contain;
+  background:var(--side-bg); color:#fff;
+  box-shadow:4px 0 30px rgba(42,15,60,.18);
+}
+.side-glow{
+  position:absolute; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(260px 200px at 0% 0%, rgba(255,107,154,.35), transparent 70%),
+    radial-gradient(240px 240px at 100% 55%, rgba(124,58,237,.35), transparent 70%),
+    radial-gradient(260px 200px at 10% 100%, rgba(251,191,36,.18), transparent 70%);
+}
+.sidenav > *:not(.side-glow){position:relative; z-index:1}
+
+.side-brand{display:flex; align-items:center; gap:12px; padding:4px 6px 16px; margin-bottom:6px; border-bottom:1px solid rgba(255,255,255,.1)}
+.side-logo{
+  flex:none; width:46px; height:46px; border-radius:14px; display:grid; place-items:center;
+  background:#fff; box-shadow:0 6px 18px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.6);
+}
+.side-logo img{width:36px; height:36px; object-fit:contain}
+.side-name{min-width:0; line-height:1.2}
+.side-name strong{display:block; font-family:var(--f-display); font-size:16.5px; letter-spacing:.4px; white-space:nowrap}
+.side-name small{display:block; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:#f7c6da; opacity:.85; white-space:nowrap}
+.side-close{display:none}
+
+.side-label{margin:10px 10px 4px; font-size:10.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:rgba(255,255,255,.45)}
+.side-nav{display:flex; flex-direction:column; gap:4px}
+
+.side-link{
+  position:relative; display:flex; align-items:center; gap:12px;
+  width:100%; padding:9px 10px; border:0; border-radius:14px;
+  background:transparent; color:rgba(255,255,255,.8); text-decoration:none; text-align:left;
+  font:inherit; cursor:pointer; transition:background .15s, color .15s, transform .15s;
+}
+.side-link:hover{background:rgba(255,255,255,.08); color:#fff}
+.side-link:active{transform:scale(.98)}
+.side-link:focus-visible{outline:2px solid #f7c6da; outline-offset:1px}
+.side-link.is-active{
+  background:linear-gradient(90deg, rgba(255,255,255,.2), rgba(255,255,255,.07));
+  color:#fff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.14), 0 8px 22px rgba(0,0,0,.18);
+}
+.side-link.is-active::before{
+  content:""; position:absolute; left:-14px; top:10px; bottom:10px; width:4px; border-radius:0 4px 4px 0;
+  background:linear-gradient(#ffd1e1, #ff6b9a);
+}
+.side-ico{
+  flex:none; width:40px; height:40px; border-radius:12px; display:grid; place-items:center;
+  background:rgba(255,255,255,.12); box-shadow:0 6px 14px rgba(0,0,0,.22);
+  transition:transform .2s;
+}
+.side-link:hover .side-ico{transform:translateY(-1px) rotate(-4deg)}
+.side-ico svg, .topbar-ico svg, .menu-btn svg, .side-close svg, .side-collapse svg{
+  width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round;
+}
+.side-ico svg{color:#fff}
+.side-btn .side-ico{background:rgba(255,255,255,.12)}
+.side-text{min-width:0; display:flex; flex-direction:column; line-height:1.25}
+.side-text b{font-size:14.5px; font-weight:600; white-space:nowrap}
+.side-text small{font-size:11.5px; color:rgba(255,255,255,.55); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.side-link.is-active .side-text small{color:rgba(255,255,255,.75)}
+.side-count{
+  margin-left:auto; min-width:24px; padding:2px 7px; border-radius:999px; text-align:center;
+  background:linear-gradient(135deg, #ff6b9a, #d6336c); color:#fff; font-size:11.5px; font-weight:700;
+  box-shadow:0 4px 10px rgba(214,51,108,.45);
+}
+
+.side-foot{margin-top:auto; padding-top:12px; display:flex; flex-direction:column; gap:6px}
+.side-card{
+  display:flex; align-items:center; gap:12px; padding:12px; border-radius:16px; margin-bottom:4px;
+  background:linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.04));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.side-card-ico{
+  flex:none; width:40px; height:40px; border-radius:12px; display:grid; place-items:center; font-size:20px;
+  background:var(--tone-amber); color:#fff; box-shadow:0 6px 14px rgba(240,124,18,.35);
+}
+.side-collapse{
+  align-self:flex-end; width:34px; height:34px; border-radius:10px; display:grid; place-items:center;
+  border:0; cursor:pointer; color:#fff; background:rgba(255,255,255,.1); transition:background .15s;
+}
+.side-collapse:hover{background:rgba(255,255,255,.2)}
+.side-collapse svg{width:18px; height:18px; transition:transform .25s}
+.side-scrim{display:none}
+
+/* ---------- computers: the menu can shrink to its icons ---------- */
+@media (min-width:901px){
+  .shell.is-collapsed{grid-template-columns:var(--side-w-mini) minmax(0, 1fr)}
+  .is-collapsed .sidenav{padding-left:12px; padding-right:12px}
+  .is-collapsed .side-text, .is-collapsed .side-name, .is-collapsed .side-label{display:none}
+  .is-collapsed .side-brand{justify-content:center; padding-left:0; padding-right:0}
+  .is-collapsed .side-link{justify-content:center; padding:8px 0}
+  .is-collapsed .side-link.is-active::before{left:-12px}
+  .is-collapsed .side-count{position:absolute; top:2px; right:4px; min-width:0; padding:1px 6px; font-size:10px}
+  .is-collapsed .side-card{justify-content:center; padding:8px 0; background:none; box-shadow:none}
+  .is-collapsed .side-collapse{align-self:center}
+  .is-collapsed .side-collapse svg{transform:rotate(180deg)}
+}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; gap:14px;
+  padding:14px 26px; min-height:72px;
+  background:rgba(255,255,255,.72); backdrop-filter:saturate(1.6) blur(14px); -webkit-backdrop-filter:saturate(1.6) blur(14px);
+  border-bottom:1px solid rgba(142,43,82,.08);
+}
+.menu-btn{
+  display:none; flex:none; width:42px; height:42px; border-radius:12px; place-items:center;
+  border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer;
+  box-shadow:0 2px 8px rgba(29,27,30,.06);
+}
+.topbar-ico{
+  flex:none; width:44px; height:44px; border-radius:14px; display:grid; place-items:center; color:#fff;
+  box-shadow:0 8px 18px rgba(29,27,30,.15);
+}
+.topbar-ico svg{width:23px; height:23px}
+.topbar-title{min-width:0}
+.topbar-title h1{margin:0; font-family:var(--f-display); font-size:22px; line-height:1.15; color:#3a1238; letter-spacing:.3px}
+.topbar-title small{display:block; font-size:13px; color:var(--muted)}
+.topbar-date{
+  margin-left:auto; padding:7px 14px; border-radius:999px; white-space:nowrap;
+  font-size:12.5px; font-weight:600; color:#6d1f3e;
+  background:linear-gradient(135deg, #fff0f6, #f3e8ff); border:1px solid #f1dbe8;
+}
+
+/* ---------- cards pick up a little colour ---------- */
+.card{border-color:#ece5f0; border-radius:16px; box-shadow:0 1px 2px rgba(58,18,56,.04), 0 10px 30px rgba(58,18,56,.06)}
+.card-head h2{color:#7a4a68}
+
+/* ---------- sign in ---------- */
+.auth-main{
+  min-height:100vh; padding:20px; display:block;
+  background:
+    radial-gradient(500px 360px at 15% 10%, rgba(255,107,154,.45), transparent 70%),
+    radial-gradient(520px 420px at 90% 80%, rgba(124,58,237,.45), transparent 70%),
+    var(--side-bg);
+}
+.auth-main .login .card{border:0; border-radius:20px; padding:28px 24px; box-shadow:0 30px 80px rgba(20,5,30,.45)}
+
+/* ---------- phones and tablets: the menu slides in ---------- */
+@media (max-width:900px){
+  .shell{display:block}
+  .sidenav{
+    position:fixed; left:0; top:0; bottom:0; height:auto; width:min(300px, 86vw); z-index:70;
+    padding-top:calc(18px + env(safe-area-inset-top)); padding-bottom:calc(14px + env(safe-area-inset-bottom));
+    transform:translateX(-104%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    box-shadow:none;
+  }
+  .is-open .sidenav{transform:none; box-shadow:12px 0 50px rgba(20,5,30,.45)}
+  .side-scrim{
+    display:block; position:fixed; inset:0; z-index:69;
+    background:rgba(25,8,32,.45); backdrop-filter:blur(2px);
+    opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .is-open .side-scrim{opacity:1; pointer-events:auto}
+  .side-close{
+    display:grid; place-items:center; margin-left:auto; flex:none; width:38px; height:38px; border-radius:12px;
+    border:0; background:rgba(255,255,255,.1); color:#fff; cursor:pointer;
+  }
+  .side-collapse{display:none}
+  .side-link{padding:10px}
+
+  .menu-btn{display:grid}
+  .topbar{padding:10px 14px; padding-top:calc(10px + env(safe-area-inset-top)); min-height:64px; gap:12px}
+  .topbar-date{display:none}
+  .stage > main{padding:16px 16px 28px}
+}
+
+@media (max-width:720px){
+  .topbar-ico{width:38px; height:38px; border-radius:12px}
+  .topbar-ico svg{width:20px; height:20px}
+  .topbar-title h1{font-size:18px}
+  .topbar-title small{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .stage > main{padding:12px 12px 24px}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom)); max-width:calc(100vw - 24px); text-align:center}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .sidenav, .side-scrim, .shell, .side-ico{transition:none}
+}
+
+/* the top bar names the page, so the page's own big title is not repeated */
+.stage .pm-title{display:none}
+
+/* sign in: centred card with the academy logo */
+.auth-main .login{min-height:calc(100vh - 40px); align-items:center; padding-top:0}
+.auth-main .login-mark{
+  width:76px; height:76px; margin:-62px auto 10px; border-radius:22px; display:grid; place-items:center;
+  background:#fff; box-shadow:0 14px 34px rgba(42,15,60,.35);
+}
+.auth-main .login-mark img{width:58px; height:58px; object-fit:contain}
+.auth-main .login .card{margin-top:40px}
+.login-sub{margin:2px 0 0; font-size:11px; letter-spacing:1.8px; text-transform:uppercase; color:#b06d8e}
+.auth-main .btn-primary{background:linear-gradient(135deg, #d6336c, #7c3aed); border:0; min-height:46px; box-shadow:0 10px 24px rgba(124,58,237,.3)}
+
+/* the Classes page */
+:root{--tone-teal:linear-gradient(135deg, #2dd4bf, #0e8a8f)}
+[data-tone=teal] .side-ico, .topbar-ico[data-tone=teal]{background:var(--tone-teal)}
+
+/* =========================================================
+   Titles: big, coloured and with an icon, so each page and each
+   section is recognised at a glance.
+   ========================================================= */
+
+/* ---- the page title in the top bar ---- */
+.topbar{min-height:88px; padding:14px 28px; gap:16px}
+.topbar-ico{width:58px; height:58px; border-radius:18px; box-shadow:0 12px 26px rgba(29,27,30,.18)}
+.topbar-ico svg{width:29px; height:29px; stroke-width:1.8}
+.topbar-title h1{
+  font-size:31px; letter-spacing:.8px; line-height:1.1;
+  background:linear-gradient(90deg, #3a1238, #8e2b52 55%, #c0398a); -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.topbar-title small{font-size:14.5px; margin-top:3px}
+
+/* ---- section titles on the cards ---- */
+.card-head{margin:-2px 0 18px; padding-bottom:14px; border-bottom:1px solid #f1eaf4}
+.card-head h2, .pm-fold .fold-title{
+  display:flex; align-items:center; gap:12px;
+  font-family:var(--f-display); font-size:19px; font-weight:700; text-transform:none; letter-spacing:.5px;
+  color:#3a1238;
+}
+.card-head h2[data-ico]::before, .pm-fold .fold-title::before{
+  content:attr(data-ico); flex:none; width:42px; height:42px; border-radius:13px; display:grid; place-items:center;
+  font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; font-size:21px; letter-spacing:0;
+  background:var(--tint, #f6eef2); box-shadow:inset 0 0 0 1px rgba(255,255,255,.7), 0 6px 14px var(--tint-shadow, rgba(142,43,82,.15));
+}
+[data-tone=rose]  {--tint:linear-gradient(135deg,#ffe3ee,#ffc6da); --tint-shadow:rgba(232,69,124,.22); --edge:#e8457c}
+[data-tone=blue]  {--tint:linear-gradient(135deg,#e2ecff,#c3d6ff); --tint-shadow:rgba(53,103,232,.22); --edge:#3567e8}
+[data-tone=green] {--tint:linear-gradient(135deg,#dcf7ea,#b5ecd2); --tint-shadow:rgba(15,159,110,.22); --edge:#0f9f6e}
+[data-tone=amber] {--tint:linear-gradient(135deg,#fff1d6,#ffdca0); --tint-shadow:rgba(240,124,18,.22); --edge:#f07c12}
+[data-tone=violet]{--tint:linear-gradient(135deg,#efe5ff,#dac6ff); --tint-shadow:rgba(124,58,237,.22); --edge:#7c3aed}
+[data-tone=teal]  {--tint:linear-gradient(135deg,#d9f7f4,#aeeee6); --tint-shadow:rgba(14,138,143,.22); --edge:#0e9aa7}
+[data-tone=red]   {--tint:linear-gradient(135deg,#ffe1e1,#ffc2c2); --tint-shadow:rgba(229,72,77,.22); --edge:#e5484d}
+/* each card wears its section colour along the top */
+.card:has(> .card-head h2[data-tone]){border-top:4px solid var(--edge-c, #e3d6e6)}
+.card:has(> .card-head h2[data-tone=rose])  {--edge-c:#e8457c}
+.card:has(> .card-head h2[data-tone=blue])  {--edge-c:#3567e8}
+.card:has(> .card-head h2[data-tone=green]) {--edge-c:#0f9f6e}
+.card:has(> .card-head h2[data-tone=amber]) {--edge-c:#f07c12}
+.card:has(> .card-head h2[data-tone=violet]){--edge-c:#7c3aed}
+.card:has(> .card-head h2[data-tone=teal])  {--edge-c:#0e9aa7}
+.card:has(> .card-head h2[data-tone=red])   {--edge-c:#e5484d}
+.card-head h2[data-tone=red]{color:#b3261e}
+
+/* side panels (student editor, WhatsApp …) */
+.sheet-head h2{font-size:24px; letter-spacing:.5px}
+
+/* sections inside a student's payment details */
+.pm-detail h3{font-size:13.5px; color:#6d1f3e; letter-spacing:1px}
+
+/* ---- class tabs and session groups wear their class colour ---- */
+.seg button.cls-tab{box-shadow:inset 0 3px 0 var(--c)}
+.seg button.cls-tab.is-on{background:var(--c); border-color:var(--c); color:#fff;
+  box-shadow:0 8px 18px color-mix(in srgb, var(--c) 35%, transparent)}
+.pm-group[style*="--c"]{border-top:4px solid var(--c)}
+.pm-group:not(.st-unplaced) .pm-ghead{background:linear-gradient(90deg, color-mix(in srgb, var(--c, #8e2b52) 13%, #fff), #fff 80%)}
+.pm-ghead{padding:14px 18px}
+.pm-gname b{font-size:21px; letter-spacing:.6px; color:color-mix(in srgb, var(--c, #8e2b52) 72%, #1d1b1e)}
+.pm-gname i{font-size:13.5px}
+.pm-gname span{font-weight:600}
+
+/* ---- the Classes page ---- */
+.cv-class-head h2{font-size:27px !important}
+
+@media (max-width:900px){
+  .topbar{min-height:70px; padding:10px 14px; padding-top:calc(10px + env(safe-area-inset-top))}
+  .topbar-ico{width:46px; height:46px; border-radius:14px}
+  .topbar-ico svg{width:24px; height:24px}
+  .topbar-title h1{font-size:24px}
+}
+@media (max-width:720px){
+  .topbar-title h1{font-size:22px}
+  .topbar-title small{font-size:12.5px}
+  .card-head h2, .pm-fold .fold-title{font-size:17px}
+  .card-head h2[data-ico]::before, .pm-fold .fold-title::before{width:38px; height:38px; font-size:19px}
+  .pm-gname b{font-size:19px}
+}
+
+/* the World clock page */
+:root{--tone-indigo:linear-gradient(135deg, #818cf8, #4338ca)}
+[data-tone=indigo] .side-ico, .topbar-ico[data-tone=indigo]{background:var(--tone-indigo)}
+
+/* the Teachers page */
+:root{--tone-coral:linear-gradient(135deg, #ff9a76, #e5484d)}
+[data-tone=coral] .side-ico, .topbar-ico[data-tone=coral]{background:var(--tone-coral)}
+
+/* a teacher's phone: a slim bar and their check-in */
+.teacher-shell{min-height:100vh; background:radial-gradient(600px 300px at 100% 0%, rgba(192,132,252,.18), transparent 70%), #f6f3f9}
+.teacher-bar{
+  position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:12px;
+  padding:10px 16px; padding-top:calc(10px + env(safe-area-inset-top));
+  background:var(--side-bg); color:#fff; box-shadow:0 4px 18px rgba(42,15,60,.25);
+}
+.teacher-bar .side-logo{width:40px; height:40px; border-radius:12px}
+.teacher-bar .side-logo img{width:30px; height:30px}
+.teacher-bar-name strong{display:block; font-family:var(--f-display); font-size:16px; letter-spacing:.4px}
+.teacher-bar-name small{font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:#f7c6da}
+.teacher-main{padding:16px 14px calc(24px + env(safe-area-inset-bottom))}
+
+/* sign in: office / teacher */
+.login-who{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:16px 0 4px; padding:5px; border-radius:16px; background:#f4eef7}
+.login-who button{border:0; cursor:pointer; min-height:44px; border-radius:12px; background:none; font:inherit; font-size:15px; font-weight:700; color:#6f5a76}
+.login-who button.is-on{background:#fff; color:#3a1238; box-shadow:0 4px 12px rgba(58,18,56,.12)}
+.login-teachers{display:flex; flex-wrap:wrap; gap:8px; margin-top:4px}
+.login-teachers button{display:inline-flex; align-items:center; gap:8px; min-height:46px; padding:4px 16px 4px 5px; border-radius:999px; cursor:pointer;
+  border:1.5px solid #e3d6e6; background:#fff; font:inherit; font-size:15px; font-weight:600; color:#3a1238}
+.login-teachers button i{font-style:normal; width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:#f4eef7; font-weight:800}
+.login-teachers button.is-on{border-color:#e8457c; background:#fff0f6}
+.login-teachers button.is-on i{background:linear-gradient(135deg, #ff6b9a, #d6336c); color:#fff}
+.login-pin{font-size:26px !important; letter-spacing:10px; text-align:center}
+
+/* the Attendance page */
+:root{--tone-sky:linear-gradient(135deg, #38bdf8, #0369a1)}
+[data-tone=sky] .side-ico, .topbar-ico[data-tone=sky]{background:var(--tone-sky)}
+
+/* a teacher's phone: check in, or take the student register */
+.teacher-tabs{position:sticky; top:calc(60px + env(safe-area-inset-top)); z-index:19; display:grid; grid-template-columns:1fr 1fr; gap:6px;
+  padding:8px 12px; background:rgba(246,243,249,.92); backdrop-filter:blur(10px); border-bottom:1px solid #ece5f0}
+.teacher-tabs a{display:flex; align-items:center; justify-content:center; min-height:44px; border-radius:14px; text-decoration:none;
+  font-weight:700; font-size:15px; color:#5b4660; background:#fff; border:1px solid #ece5f0}
+.teacher-tabs a.is-on{background:linear-gradient(135deg, #3a1238, #74204f); color:#fff; border-color:transparent; box-shadow:0 6px 16px rgba(58,18,56,.25)}
+@media print{ .teacher-bar, .teacher-tabs{display:none !important} }
+
+/* the Registration pool */
+:root{--tone-fuchsia:linear-gradient(135deg, #f472b6, #a21caf)}
+[data-tone=fuchsia] .side-ico, .topbar-ico[data-tone=fuchsia]{background:var(--tone-fuchsia)}
+[data-tone=fuchsia]{--tint:linear-gradient(135deg,#fde4f5,#f8c4ea); --tint-shadow:rgba(162,28,175,.22); --edge:#a21caf}
+
+
+/* Today's special */
+:root{--tone-party:linear-gradient(135deg, #ff8fb4, #d6336c 50%, #7c3aed)}
+[data-tone=party] .side-ico, .topbar-ico[data-tone=party]{background:var(--tone-party)}
+.side-count.party{background:linear-gradient(135deg, #fbbf24, #f97316); color:#fff}

@@ -1,0 +1,102 @@
+@if (bare()) {
+  <!-- the parents' registration form: a page of its own, no menu -->
+  <router-outlet />
+} @else if (auth.isOffice()) {
+  <div class="shell" [class.is-collapsed]="collapsed()" [class.is-open]="open()">
+
+    <!-- ============ side menu: docked on a computer, slides in on a phone ============ -->
+    <aside class="sidenav" id="sideMenu" aria-label="Main menu">
+      <div class="side-glow" aria-hidden="true"></div>
+
+      <div class="side-brand">
+        <span class="side-logo"><img [src]="logo()" alt=""></span>
+        <span class="side-name">
+          <strong>{{ brand() }}</strong>
+          <small>of Performing Arts</small>
+        </span>
+        <button type="button" class="side-close" (click)="open.set(false)" aria-label="Close menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <p class="side-label">Menu</p>
+      <nav class="side-nav" aria-label="Main">
+        @for (n of nav; track n.path) {
+          <a class="side-link" [attr.data-tone]="n.tone" [routerLink]="n.path" routerLinkActive="is-active"
+             [routerLinkActiveOptions]="{ exact: n.path === '/' }" [attr.title]="collapsed() ? n.label : null">
+            <span class="side-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="n.icon"/></svg></span>
+            <span class="side-text">
+              <b>{{ n.label }}</b>
+              <small>{{ n.hint }}</small>
+            </span>
+            @if (n.path === '/today' && birthdaysToday()) {
+              <span class="side-count party" title="Birthdays today">{{ birthdaysToday() }}</span>
+            }
+            @if (n.path === '/history' && store.receipts().length) {
+              <span class="side-count">{{ store.receipts().length }}</span>
+            }
+          </a>
+        }
+      </nav>
+
+      <div class="side-foot">
+        <div class="side-card">
+          <span class="side-card-ico">♪</span>
+          <span class="side-text">
+            <b>{{ store.students().length }} students</b>
+            <small>{{ store.receipts().length }} receipts issued</small>
+          </span>
+        </div>
+        <button type="button" class="side-link side-btn" (click)="auth.logout()" [attr.title]="collapsed() ? 'Sign out' : null">
+          <span class="side-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/></svg></span>
+          <span class="side-text"><b>Sign out</b></span>
+        </button>
+        <button type="button" class="side-collapse" (click)="toggleCollapsed()"
+                [attr.aria-label]="collapsed() ? 'Expand menu' : 'Collapse menu'">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+      </div>
+    </aside>
+    <div class="side-scrim" (click)="open.set(false)" aria-hidden="true"></div>
+
+    <!-- ============ page ============ -->
+    <div class="stage">
+      <header class="topbar">
+        <button type="button" class="menu-btn" (click)="open.set(true)" aria-label="Open menu"
+                aria-controls="sideMenu" [attr.aria-expanded]="open()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        </button>
+        <span class="topbar-ico" [attr.data-tone]="page().tone">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="page().icon"/></svg>
+        </span>
+        <div class="topbar-title">
+          <h1>{{ page().label }}</h1>
+          <small>{{ page().hint }}</small>
+        </div>
+        <span class="topbar-date">{{ today }}</span>
+      </header>
+      <main>
+        <router-outlet />
+      </main>
+    </div>
+  </div>
+} @else if (auth.isTeacher()) {
+  <!-- a teacher's phone: just their check-in -->
+  <div class="teacher-shell">
+    <header class="teacher-bar">
+      <span class="side-logo"><img [src]="logo()" alt=""></span>
+      <span class="teacher-bar-name"><strong>Shalom Academy</strong><small>{{ auth.teacherName() || 'Teacher' }}</small></span>
+    </header>
+    <nav class="teacher-tabs" aria-label="Teacher">
+      <a routerLink="/checkin" routerLinkActive="is-on">📍 Check in</a>
+      <a routerLink="/roll" routerLinkActive="is-on">✋ Students</a>
+    </nav>
+    <main class="teacher-main"><router-outlet /></main>
+  </div>
+} @else {
+  <main class="auth-main">
+    <router-outlet />
+  </main>
+}
+
+<div class="toast" [hidden]="!toast.message()" role="status">{{ toast.message() }}</div>

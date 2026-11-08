@@ -1,0 +1,164 @@
+@let r = receipt();
+@let s = settings();
+<div class="paper-wrap" #wrap [style.height.px]="wrapHeight()">
+  <div class="paper" #paper [class.monthly]="monthly()" [class.classic]="!monthly()" [class.duo]="people().length > 1" [class.trio]="people().length > 2" [style]="paperVars()">
+    <div class="rc-band"></div><div class="rc-band-b"></div>
+
+    @if (monthly()) {
+      <!-- the month's flower as a watermark, behind everything -->
+      <img class="rc-watermark" [src]="watermarkArt()" alt="">
+      <img class="rc-floral" [src]="borderArt()" alt="">
+      <!-- The month's flower, top-left. Out of the flow, so it never competes with the fee
+           table for room on a fixed A5 page. -->
+      <span class="rc-topflower">
+        <img [src]="bloomArt()" alt=""><em>{{ flowerName() }} Edition</em>
+      </span>
+    }
+
+    <div class="rc">
+      <header class="rc-head">
+        <div class="rc-headtext">
+          <h1 class="rc-name">{{ s.academyName }}</h1>
+          @if (s.tagline) { <p class="rc-tag">{{ s.tagline }}</p> }
+          @if (s.motto) { <p class="rc-motto">{{ s.motto }}</p> }
+          <!-- on the monthly sheet the contact line sits in the footer instead -->
+          @if (contact() && !monthly()) { <p class="rc-contact">{{ contact() }}</p> }
+        </div>
+        @if (logoSrc()) {
+          <img class="rc-logo" [src]="logoSrc()" alt="" (load)="layout()">
+        } @else {
+          <div class="rc-mark">{{ initials() }}</div>
+        }
+      </header>
+      <div class="rc-rule"></div>
+
+      <div class="rc-titlebar">
+        <div class="rc-title">
+          <u>{{ monthly() ? 'Monthly Fee Receipt' : 'Fee Receipt' }}</u>
+          @if (monthly()) { <i>{{ r.period }}</i> }
+        </div>
+        <div class="rc-meta">
+          <div><b>No.</b>&ngsp;<span>{{ r.number }}</span></div>
+          <div><b>Date</b>&ngsp;<span>{{ prettyDate(r.date) }}</span></div>
+        </div>
+      </div>
+
+      <!-- Who paid, who it is for, and which session: one box, because it is all one answer. -->
+      <div class="rc-party">
+        <p class="rc-received">Received with thanks from</p>
+        @if (r.payer) { <p class="rc-payer">{{ r.payer }}</p> }
+
+        @if (people().length > 1) {
+          <div class="rc-people">
+            @for (p of people(); track $index) {
+              @let c = sessionFor(p.session);
+              @if (monthly()) {
+                <!-- each child as one row, laid out like the single-student sheet:
+                     who they are on the left, their session on the right -->
+                <div class="rc-person duo">
+                  <span class="rc-duo-who">
+                    <b>{{ p.name || '—' }}</b>
+                    <span>{{ studentMeta(p) }}</span>
+                  </span>
+                  <span class="rc-duo-sess">
+                    @if (c?.symbol) {
+                      <span class="rc-sess-sym" [class.is-dyn]="c?.symbolStyle === 'italic'">{{ c?.symbol }}</span>
+                    }
+                    <span class="rc-duo-sess-text">
+                      <b>{{ c ? c.name : (p.cls || 'Class') }}</b>
+                      <i>{{ duoWhen(p) }}</i>
+                    </span>
+                  </span>
+                </div>
+              } @else {
+                <div class="rc-person"><b>{{ p.name || '—' }}</b><span>{{ personMeta(p) }}</span></div>
+              }
+            }
+          </div>
+        } @else if (monthly()) {
+          @let p = people()[0];
+          <p class="rc-student">{{ p.name || '—' }}</p>
+          <p class="rc-studentmeta">{{ studentMeta(p) }}</p>
+        } @else {
+          <div class="rc-pairs">
+            @for (x of pairs(); track x[0]) {
+              <div class="rc-pair" [class.wide]="x[2]"><b>{{ x[0] }}</b><span [class.big]="x[2]">{{ x[1] }}</span></div>
+            }
+          </div>
+        }
+
+        <!-- The session band: the mark, the session name, and when the class meets. With two
+             children each row above carries its own session instead. -->
+        @if (monthly() && people().length === 1) {
+          @let c = sessionFor(r.session);
+          @if (c || when() || r.cls) {
+            <div class="rc-sess">
+              @if (c?.symbol) {
+                <span class="rc-sess-sym" [class.is-dyn]="c?.symbolStyle === 'italic'">{{ c?.symbol }}</span>
+              }
+              <span class="rc-sess-text"><u>Class Session Name</u><b>{{ c ? c.name : (r.cls || 'Class') }}</b></span>
+              <span class="rc-sess-when">
+                @if (when()) { <b>{{ when() }}</b> }
+                @if (r.cls) { <i>{{ r.cls }}</i> }
+              </span>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="rc-period"><b>Class fee for</b><span>{{ r.period }}</span></div>
+
+      <table class="rc-items">
+        <thead><tr><th class="n">#</th><th>Description</th><th class="amt">Amount ({{ cur() }})</th></tr></thead>
+        <tbody>
+          @for (it of r.items; track $index) {
+            <tr>
+              <td class="n">{{ $index + 1 }}</td>
+              <td>{{ it.desc }}@if (it.sub) {<i>{{ it.sub }}</i>}</td>
+              <td class="amt">{{ money(it.amount) }}</td>
+            </tr>
+          } @empty {
+            <tr class="filler"><td class="n"></td><td></td><td class="amt"></td></tr>
+          }
+          @for (x of fillers(); track $index) {
+            <tr class="filler"><td class="n"></td><td></td><td class="amt"></td></tr>
+          }
+        </tbody>
+        <tfoot><tr><td colspan="2" class="lbl">Total {{ cur() }}</td><td class="amt">{{ money(r.total) }}</td></tr></tfoot>
+      </table>
+
+      <div class="rc-words"><b>Amount in words</b>{{ words() }}</div>
+
+      <div class="rc-pay">
+        <div><b>Paid by</b>{{ r.method }}</div>
+        @if (r.reference) { <div><b>Reference</b>{{ r.reference }}</div> }
+      </div>
+
+      @if (r.note) { <p class="rc-note">{{ r.note }}</p> }
+
+      <footer class="rc-foot">
+        <div class="rc-close">
+          <div class="rc-stamp" [style.background-image]="monthly() ? paidSeal : null">Paid<span>{{ prettyDate(r.date) }}</span></div>
+          <div class="rc-sigbox">
+            <div class="rc-sigimg">
+              @if (showSignImage()) {
+                <img [src]="signImage()" alt="" (load)="layout()">
+              } @else if (s.signName) {
+                <span class="rc-sigtext">{{ s.signName }}</span>
+              }
+            </div>
+            <div class="rc-sigline">
+              <b>{{ s.signName || NBSP }}</b>
+              <span>{{ s.signTitle || 'Authorised Signature' }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="rc-thanks">
+          @if (s.footer) { <p>{{ s.footer }}</p> }
+          @if (contact() && monthly()) { <p class="rc-contactfoot">{{ contact() }}</p> }
+          <small>This is a computer-generated receipt and is valid without a seal.</small>
+        </div>
+      </footer>
+    </div>
+  </div>
+</div>

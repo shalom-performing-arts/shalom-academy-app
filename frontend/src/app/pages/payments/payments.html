@@ -1,0 +1,344 @@
+<section class="panel pm">
+
+  <!-- ============ month bar ============ -->
+  <div class="pm-head">
+    <div>
+      <h1 class="pm-title">Payments</h1>
+      <p class="pm-sub">Monthly fee collection — tick a student when their fee comes in.</p>
+    </div>
+    <div class="pm-month">
+      <button type="button" class="btn-round" title="Previous month" (click)="shiftMonth(-1)">‹</button>
+      <div class="pm-month-label">
+        <strong>{{ monthLabel() }}</strong>
+        @if (!isCurrentMonth()) { <button type="button" class="link" (click)="thisMonth()">Back to this month</button> }
+      </div>
+      <button type="button" class="btn-round" title="Next month" (click)="shiftMonth(1)">›</button>
+      <button type="button" class="btn btn-sm" (click)="exportCsv()" [disabled]="!view()?.started" title="A CSV file that opens in Excel or Google Sheets">Export for Excel</button>
+    </div>
+  </div>
+
+  @let v = view();
+  @if (!v) {
+    <div class="card pm-empty">{{ loading() ? 'Loading…' : '' }}</div>
+  } @else {
+
+    <!-- the quickest way in: type a name, tick the fee or send the receipt -->
+    <div class="pm-search" [class.has-text]="!!query()" [class.is-open]="suggestOpen() && suggestions().length">
+      <svg class="pm-search-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input #searchBox type="search" placeholder="Type a student's name — receipt to WhatsApp in one click" enterkeyhint="go" autocomplete="off"
+             role="combobox" aria-autocomplete="list" [attr.aria-expanded]="suggestOpen() && suggestions().length > 0" aria-controls="pmSuggest"
+             [value]="query()" (input)="search($any($event.target).value)" (keydown)="onSearchKey($event)"
+             (focus)="suggestOpen.set(!!query())" (blur)="blurSearch()" aria-label="Search a student">
+      @if (query()) {
+        <button type="button" class="pm-search-clear" (click)="search(''); searchBox.focus()" aria-label="Clear the search">✕</button>
+      }
+
+      <!-- as you type: the students, and one click to their receipt on WhatsApp -->
+      @if (suggestOpen() && suggestions().length) {
+        <ul class="pm-suggest" id="pmSuggest" role="listbox">
+          @for (r of suggestions(); track r.studentId; let i = $index) {
+            <li role="option" [attr.aria-selected]="i === active()" [class.is-active]="i === active()"
+                [style.--c]="store.colour(r.category)" (mouseenter)="active.set(i)" (mousedown)="$event.preventDefault()" (click)="pickSuggestion(r)">
+              <span class="sg-av">{{ r.name.charAt(0) }}</span>
+              <span class="sg-who">
+                <b>{{ r.name }}</b>
+                <small>{{ r.category }}{{ r.session ? ' · ' + r.session : '' }} · {{ r.studentId }}</small>
+              </span>
+              <span class="status sg-status" [class]="'status sg-status ' + statusClass(r.status)">{{ r.status }}</span>
+              @if (!noTick(r) && !isPaidish(r)) {
+                <button type="button" class="sg-tick" (mousedown)="$event.preventDefault()" (click)="quickTick(r, $event)" title="Mark the fee paid (no receipt)">✓ Paid</button>
+              }
+              <span class="sg-go">{{ receipts(r).length ? '📲 Resend' : noTick(r) ? 'Open' : '📲 Receipt' }}</span>
+            </li>
+          }
+          <li class="pm-suggest-foot" aria-hidden="true">↑ ↓ to choose · <b>Enter</b> opens the receipt with WhatsApp ready · Esc to close</li>
+        </ul>
+      }
+    </div>
+
+
+    @if (!v.started) {
+      <div class="pm-banner">
+        <div>
+          <b>{{ v.label }} hasn’t started yet.</b>
+          Starting it copies every active student’s fee and session in, like making the month’s copy of the
+          workbook. It also starts by itself the first time a payment is marked.
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" (click)="startMonth()">Start {{ v.label }}</button>
+      </div>
+    }
+
+    <!-- ============ where the money is ============ -->
+    <div class="pm-tiles">
+      @for (t of tiles(); track t.name) {
+        <div class="pm-tile" [style.--tile]="t.colour">
+          <span class="pm-tile-name">{{ t.name }}</span>
+          <strong class="pm-tile-amt"><small>Rs.</small>{{ money(t.amount) }}</strong>
+          <span class="pm-tile-sub">{{ t.cash ? 'handed over' : 'bank account' }} · {{ t.count }} payment{{ t.count === 1 ? '' : 's' }}</span>
+        </div>
+      }
+    </div>
+
+    <!-- ============ the month so far ============ -->
+    <div class="card pm-summary">
+      <div class="pm-progress">
+        <div class="pm-progress-top">
+          <span>Collected <b>Rs. {{ money(v.totals.collected) }}</b> of Rs. {{ money(v.totals.expected) }}</span>
+          <strong>{{ pct(v.totals.completion) }}</strong>
+        </div>
+        <div class="bar"><span [style.width]="pct(v.totals.completion)"></span></div>
+        <div class="pm-progress-foot">
+          <span>Still to come <b>Rs. {{ money(v.totals.outstanding) }}</b></span>
+          @if (v.totals.other) { <span>Admission &amp; other <b>Rs. {{ money(v.totals.other) }}</b></span> }
+          <span>{{ v.totals.students }} students</span>
+        </div>
+      </div>
+      <div class="pm-counts">
+        <button type="button" class="pm-count is-paid" (click)="filter.set('paid')"><b>{{ v.totals.paid }}</b>Paid</button>
+        <button type="button" class="pm-count is-part" (click)="filter.set('due')"><b>{{ v.totals.partial }}</b>Part paid</button>
+        <button type="button" class="pm-count is-due" (click)="filter.set('due')"><b>{{ v.totals.pending }}</b>Pending</button>
+        @if (v.totals.free) { <span class="pm-count is-free"><b>{{ v.totals.free }}</b>Free place</span> }
+        @if (v.totals.notDue) { <span class="pm-count is-off"><b>{{ v.totals.notDue }}</b>Not due</span> }
+      </div>
+    </div>
+
+    <!-- ============ by class ============ -->
+    <div class="card pm-byclass">
+      <button type="button" class="pm-fold" (click)="showByClass.set(!showByClass())">
+        <span class="fold-title" data-ico="📚" data-tone="blue">By class</span><i>{{ showByClass() ? 'Hide' : 'Show' }}</i>
+      </button>
+      @if (showByClass()) {
+        <div class="table-scroll">
+          <table class="list">
+            <thead>
+              <tr><th>Class</th><th class="num">Students</th><th class="num">Expected</th><th class="num">Collected</th>
+                @for (o of options(); track o) { <th class="num">{{ o }}</th> }
+                <th class="num">Outstanding</th><th class="num">Done</th><th class="num">Paid</th><th class="num">To pay</th><th class="num">Places free</th></tr>
+            </thead>
+            <tbody>
+              @for (c of v.categories; track c.name) {
+                <tr>
+                  <td><b>{{ c.name }}</b></td><td class="num">{{ c.students }}</td>
+                  <td class="num">{{ money(c.expected) }}</td><td class="num">{{ money(c.collected) }}</td>
+                  @for (o of options(); track o) { <td class="num">{{ c.byPaidTo[o] ? money(c.byPaidTo[o]) : '—' }}</td> }
+                  <td class="num">{{ money(c.outstanding) }}</td>
+                  <td class="num">{{ c.expected ? pct(c.collected / c.expected) : '—' }}</td>
+                  <td class="num">{{ c.paid }}</td><td class="num">{{ c.toPay }}</td>
+                  <td class="num">{{ c.freePlaces ?? '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <!-- ============ class tabs ============ -->
+    <div class="pm-toolbar">
+      <div class="seg" role="tablist">
+        @for (t of tabs(); track t.name) {
+          <button type="button" role="tab" class="cls-tab" [style.--c]="store.colour(t.name)" [class.is-on]="tab() === t.name && !query()" (click)="tab.set(t.name); query.set('')">
+            {{ t.name }}
+            <small>{{ t.toPay ? t.toPay + ' to pay' : 'all paid' }}</small>
+            <i class="seg-bar"><span [style.width]="pct(t.done)"></span></i>
+          </button>
+        }
+      </div>
+      <div class="pm-filters">
+        <div class="chips">
+          <button type="button" [class.is-on]="filter() === 'all'" (click)="filter.set('all')">All</button>
+          <button type="button" [class.is-on]="filter() === 'due'" (click)="filter.set('due')">To pay</button>
+          <button type="button" [class.is-on]="filter() === 'paid'" (click)="filter.set('paid')">Paid</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ the sheet ============ -->
+    @for (g of groups(); track g.key) {
+      <div class="card pm-group" [style.--c]="store.colour(g.session?.category || tab())">
+        <div class="pm-ghead">
+          <div class="pm-gname">
+            <b>{{ g.title }}</b>
+            @if (g.session) {
+              @if (g.session.meaning) { <i>{{ g.session.meaning }}</i> }
+              <span>{{ g.session.day }} {{ g.session.time }}</span>
+            }
+          </div>
+          <div class="pm-gstats">
+            @if (g.session && g.session.max) {
+              <span class="pill-soft" [class.warn]="(g.session.free ?? 1) < 0">{{ g.session.students }} of {{ g.session.max }} · {{ freeLabel(g.session) }}</span>
+            }
+            <span>Rs. {{ money(g.collected) }} <em>of {{ money(g.expected) }}</em></span>
+            <i class="bar bar-sm"><span [style.width]="g.expected ? pct(g.collected / g.expected) : '0%'"></span></i>
+          </div>
+        </div>
+
+        <div class="pm-rows">
+          @for (r of g.rows; track r.studentId; let i = $index) {
+            <div class="pm-row" [class.is-open]="expanded() === r.studentId" [class.is-off]="!r.active"
+                 [class.is-busy]="busy() === r.studentId">
+              <button type="button" class="tick" [class.on]="r.status === 'Paid'" [class.half]="r.status === 'Partially Paid'"
+                      [disabled]="noTick(r) || busy() === r.studentId"
+                      [attr.aria-label]="isPaidish(r) ? 'Mark ' + r.name + ' as not paid' : 'Mark ' + r.name + ' as paid'"
+                      [title]="isPaidish(r) ? 'Paid — click to undo' : r.fee === null ? 'Enter the amount paid' : 'Mark as paid'"
+                      (click)="tick(r)">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10.5l3.2 3.2L15 7"/></svg>
+              </button>
+
+              <button type="button" class="pm-who" (click)="open(r)" [attr.aria-expanded]="expanded() === r.studentId">
+                <b>{{ r.name }}</b>
+                <small>{{ r.studentId }}@if (query() && r.session) { · {{ r.category }} {{ r.session }} }@if (r.country) { · {{ r.country }} }</small>
+              </button>
+
+              <span class="status" [class]="'status ' + statusClass(r.status)">{{ r.status }}</span>
+
+              <span class="pm-fee" [class.special]="r.feeOverridden" [class.disc]="r.discount > 0"
+                    [title]="r.discount > 0 ? 'Sibling discount of Rs. ' + money(r.discount) + ' already taken off' : ''">
+                @if (r.status === 'Not due') { <em>between terms</em> }
+                @else if (r.fee === null) { <em>per payment</em> }
+                @else if (r.status === 'Partially Paid') { {{ money(r.paid) }} <em>of {{ money(r.fee) }}</em> }
+                @else { {{ money(r.fee) }} }
+                @if (paidDate(r)) { <small>{{ paidDate(r) }}</small> }
+                @else if (r.discount > 0) { <small>sibling −{{ money(r.discount) }}</small> }
+              </span>
+
+              @if (!noTick(r)) {
+                <select class="pm-to" [ngModel]="paidTo(r)" (ngModelChange)="setPaidTo(r, $event)" aria-label="Paid to">
+                  @for (o of options(); track o) { <option [value]="o">{{ o }}</option> }
+                </select>
+              } @else {
+                <span class="pm-to-none"></span>
+              }
+
+              <input class="pm-remark" type="text" placeholder="Remark" [value]="r.remark"
+                     (change)="saveRemark(r, $any($event.target).value)" aria-label="Remark">
+
+              <span class="pm-receipt">
+                @for (p of receipts(r); track p.receiptId) {
+                  <button type="button" class="link" (click)="openReceipt(p)" title="Open the receipt">{{ p.receiptNumber }}</button>
+                } @empty {
+                  @if (!noTick(r)) {
+                    <button type="button" class="link" (click)="issueReceipt(r)">Issue receipt</button>
+                  }
+                }
+              </span>
+            </div>
+
+            <!-- details: every payment, part payments, this month's fee -->
+            @if (expanded() === r.studentId) {
+              @let a = add();
+              <div class="pm-detail">
+                <!-- the receipt, straight to the parent's WhatsApp -->
+                @if (!noTick(r) || receipts(r).length) {
+                  <div class="pm-send">
+                    @if (receipts(r)[0]; as p) {
+                      <button type="button" class="btn btn-wa" (click)="sendReceipt(p)">📲 Send receipt {{ p.receiptNumber }} on WhatsApp</button>
+                      <small>Already paid — this sends the saved receipt again.</small>
+                    } @else {
+                      <button type="button" class="btn btn-wa" (click)="issueAndSend(r)">📲 Send receipt on WhatsApp</button>
+                      <small>Fills in the {{ v.label }} receipt. Once you confirm it was sent, the fee is marked paid.</small>
+                    }
+                  </div>
+                }
+                <!-- phones: what sits on the row itself on a wider screen -->
+                <div class="pm-mobile-only pm-quick">
+                  @if (!noTick(r)) {
+                    <label class="field"><span>Paid to</span>
+                      <select [ngModel]="paidTo(r)" (ngModelChange)="setPaidTo(r, $event)">
+                        @for (o of options(); track o) { <option [value]="o">{{ o }}</option> }
+                      </select></label>
+                  }
+                  <label class="field"><span>Remark</span>
+                    <input type="text" placeholder="e.g. Paid with the admission fee" [value]="r.remark"
+                           (change)="saveRemark(r, $any($event.target).value)"></label>
+                  @if (receipts(r).length) {
+                    <p class="pm-quick-receipts">Receipt
+                      @for (p of receipts(r); track p.receiptId) {
+                        <button type="button" class="link" (click)="openReceipt(p)">{{ p.receiptNumber }}</button>
+                      }
+                    </p>
+                  }
+                </div>
+
+                <div class="pm-detail-col">
+                  <h3>Payments for {{ v.label }}</h3>
+                  @if (r.payments.length) {
+                    <table class="list compact">
+                      <tbody>
+                        @for (p of r.payments; track p.id) {
+                          <tr>
+                            <td>{{ prettyDate(p.date) }}</td>
+                            <td>{{ kindLabel(p.kind) }}@if (p.note) { <small> — {{ p.note }}</small> }</td>
+                            <td class="num"><b>{{ money(p.amount) }}</b></td>
+                            <td>{{ p.paidTo }}</td>
+                            <td>@if (p.receiptNumber) { <button type="button" class="link" (click)="openReceipt(p)">{{ p.receiptNumber }}</button> }</td>
+                            <td class="actions"><button type="button" class="btn-icon danger" (click)="removePayment(r, p)">Remove</button></td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  } @else {
+                    <p class="hint">Nothing paid yet this month.</p>
+                  }
+
+                  <div class="pm-add">
+                    <label class="field"><span>Amount</span>
+                      <input type="number" min="0" step="any" [ngModel]="a.amount" (ngModelChange)="patchAdd({ amount: $event })"></label>
+                    <label class="field"><span>For</span>
+                      <select [ngModel]="a.kind" (ngModelChange)="setAddKind($event, r)">
+                        @for (t of feeTypes(); track t.id) { <option [value]="t.id">{{ t.name }}</option> }
+                        <option value="other">Other…</option>
+                      </select></label>
+                    <label class="field"><span>Paid to</span>
+                      <select [ngModel]="a.paidTo" (ngModelChange)="patchAdd({ paidTo: $event })">
+                        @for (o of options(); track o) { <option [value]="o">{{ o }}</option> }
+                      </select></label>
+                    <label class="field"><span>Date</span>
+                      <input type="date" [ngModel]="a.date" (ngModelChange)="patchAdd({ date: $event })"></label>
+                    @if (a.kind === 'other') {
+                      <label class="field"><span>What for</span>
+                        <input type="text" placeholder="e.g. Exam fee" [ngModel]="a.note" (ngModelChange)="patchAdd({ note: $event })"></label>
+                    }
+                    <button type="button" class="btn btn-primary btn-sm" [disabled]="busy()" (click)="addPayment(r)">Add payment</button>
+                  </div>
+                  <p class="hint">A part payment is just a smaller amount — add the rest when it comes.</p>
+                </div>
+
+                <div class="pm-detail-col side">
+                  <h3>{{ v.label }} fee</h3>
+                  <label class="field">
+                    <span>Fee this month only <em>(blank = usual fee)</em></span>
+                    <input type="number" min="0" step="any" [value]="r.feeOverridden ? r.fee : ''"
+                           [placeholder]="r.fee === null ? 'no set fee' : money(r.fee)"
+                           (change)="setMonthFee(r, $any($event.target).value)">
+                  </label>
+                  @if (r.parent || r.phone) {
+                    <p class="pm-contact">{{ r.parent }}@if (r.phone) { <a [href]="'tel:' + r.phone">{{ r.phone }}</a> }</p>
+                  }
+                  <button type="button" class="btn btn-sm" (click)="issueReceipt(r)">Issue a receipt</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    } @empty {
+      <div class="card pm-empty">
+        {{ query() ? 'No student matches “' + query() + '”.' : filter() === 'due' ? 'Everyone in ' + tab() + ' has paid. 🎉' : 'Nobody here yet.' }}
+      </div>
+    }
+
+    @if (v.unmatched.length) {
+      <div class="card">
+        <div class="card-head"><h2 data-ico="❓" data-tone="amber">Payments not matched to a student</h2></div>
+        <p class="hint">From receipts written for a name that is not on the Students page.</p>
+        <table class="list compact"><tbody>
+          @for (p of v.unmatched; track p.id) {
+            <tr><td>{{ p.studentName }}</td><td>{{ kindLabel(p.kind) }}</td><td class="num">{{ money(p.amount) }}</td>
+              <td>{{ p.paidTo }}</td><td>{{ p.receiptNumber }}</td></tr>
+          }
+        </tbody></table>
+      </div>
+    }
+  }
+</section>

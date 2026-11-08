@@ -1,0 +1,21 @@
+# What is NOT sent to Google when building the container.
+# Above all: the data folder (students, payments, passwords) never leaves this computer this way;
+# the data goes into the cloud database once, through import-to-cloud.ps1.
+
+.gcloudignore
+.git
+.gitignore
+**/node_modules/
+**/.angular/
+**/dist/
+**/target/
+**/.idea/
+**/.vscode/
+
+# private: the academy's data, passwords and spreadsheets
+backend/data/
+backend/data-backup-*/
+*.xlsx
+*.csv
+samples/
+*.log

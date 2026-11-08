@@ -1,0 +1,131 @@
+:host{display:block}
+.ci{max-width:560px; margin:0 auto; display:flex; flex-direction:column; gap:14px; padding-bottom:20px}
+
+/* hello */
+.ci-hello{
+  display:flex; align-items:center; gap:16px; padding:22px 20px; border-radius:24px; color:#fff;
+  background:radial-gradient(260px 200px at 0% 0%, rgba(255,107,154,.5), transparent 70%),
+             radial-gradient(240px 200px at 100% 100%, rgba(124,58,237,.55), transparent 70%),
+             linear-gradient(150deg, #2a0f3c, #74204f);
+  box-shadow:0 18px 40px rgba(58,18,56,.3);
+}
+.ci-hello > div:first-child{flex:1; min-width:0}
+.ci-greet{margin:0; font-size:15px; opacity:.85}
+.ci-hello h1{margin:2px 0 0; font-family:var(--f-display); font-size:30px; letter-spacing:.6px; line-height:1.15}
+.ci-date{margin:6px 0 0; font-size:14px; opacity:.85}
+.ci-ring{
+  flex:none; width:86px; height:86px; border-radius:50%; display:grid; place-content:center; text-align:center;
+  background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 3px rgba(255,255,255,.35);
+}
+.ci-ring b{font-size:28px; line-height:1}
+.ci-ring b small{font-size:15px; opacity:.75}
+.ci-ring span{font-size:11px; text-transform:uppercase; letter-spacing:1px; opacity:.8}
+
+/* location */
+.ci-where{display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:18px; background:#fff;
+  border:1px solid #ece5f0; box-shadow:0 6px 18px rgba(58,18,56,.06)}
+.ci-where > div{flex:1; min-width:0; line-height:1.3}
+.ci-where b{display:block; font-size:15.5px}
+.ci-where small{font-size:13px; color:var(--muted)}
+.ci-where.here{background:linear-gradient(135deg, #e6f7ee, #fff); border-color:#a7dfc0}
+.ci-where.here b{color:#0b6b3f}
+.ci-where.away{background:linear-gradient(135deg, #fff5e3, #fff); border-color:#f3d6a0}
+.ci-where.bad{background:linear-gradient(135deg, #fde9ee, #fff); border-color:#f5b5c6}
+.ci-pin{font-size:26px; flex:none}
+.ci-pulse{flex:none; width:22px; height:22px; border-radius:50%; background:#3567e8; animation:ci-pulse 1.2s infinite}
+@keyframes ci-pulse{0%{box-shadow:0 0 0 0 rgba(53,103,232,.5)} 100%{box-shadow:0 0 0 16px rgba(53,103,232,0)}}
+.ci-link{flex:none; border:0; background:none; color:#6d1f3e; font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; padding:8px 4px; min-height:40px}
+
+.ci-msg{margin:0; padding:12px 14px; border-radius:14px; font-size:14.5px; line-height:1.45}
+.ci-msg.ok{background:#e3f6ec; color:#0b6b3f; border:1px solid #a7dfc0; font-weight:600}
+.ci-msg.finish{background:linear-gradient(135deg, #f3e8ff, #fff0f6); color:#5b1f6e; border:1px solid #dcc4f2}
+
+/* after the class: the note and the "Class done" button */
+.ci-class.st-FINISH{box-shadow:0 12px 30px rgba(124,58,237,.18); border-color:#d6c2f5}
+.ci-class.st-COMPLETE{background:linear-gradient(90deg, #eefaf3, #fff)}
+.ci-class.st-UNFINISHED{background:#fff8ef}
+.ci-finish{grid-column:1 / -1; display:flex; flex-direction:column; gap:8px; padding-top:10px; border-top:1px dashed #e3d6ec}
+.ci-finish label span{display:block; font-size:13px; font-weight:600; color:#5b4660; margin-bottom:4px}
+.ci-finish label em{font-style:normal; font-weight:400; color:var(--muted)}
+.ci-finish textarea{width:100%; font:inherit; font-size:16px; line-height:1.4; padding:10px 12px; border-radius:12px; border:1px solid #e0d4e6; resize:vertical}
+.ci-btn.ci-btn-done{width:100%; min-height:54px; background:linear-gradient(135deg, #a855f7, #6d28d9); box-shadow:0 10px 22px rgba(109,40,217,.35)}
+.ci-finish-by{text-align:center; font-size:12px; color:var(--muted)}
+.ci-done.in{color:#3567e8}
+.ci-note{grid-column:1 / -1; margin:0; padding:8px 12px; border-radius:12px; background:#f6f1fa; font-size:13.5px; font-style:italic; color:#5b4660}
+.ci-msg.info{background:#eef3ff; color:#22479c; border:1px solid #c9d8fb}
+.ci-msg.bad{background:#fdecec; color:#9c1d1d; border:1px solid #f3c0c0}
+
+.ci-holiday{display:flex; gap:12px; align-items:center; padding:14px 16px; border-radius:18px; background:#fff6e0; border:1px solid #f3dca0}
+.ci-holiday span{font-size:26px}
+.ci-holiday b{display:block}
+.ci-holiday small{color:#7a5a12}
+
+.ci-h2{margin:8px 2px -4px; font-family:var(--f-display); font-size:19px; color:#3a1238; letter-spacing:.5px}
+
+/* a class */
+.ci-class{
+  --c:#8e2b52; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:14px;
+  padding:14px; border-radius:18px; background:#fff; border:1px solid #ece5f0; border-left:6px solid var(--c);
+  box-shadow:0 6px 18px rgba(58,18,56,.06);
+}
+.ci-class.st-OPEN{box-shadow:0 10px 26px color-mix(in srgb, var(--c) 22%, transparent); border-color:color-mix(in srgb, var(--c) 35%, #fff)}
+.ci-class.st-DONE{background:linear-gradient(90deg, #f0faf4, #fff)}
+.ci-class.st-MISSED, .ci-class.st-HOLIDAY{opacity:.7}
+.ci-time{text-align:center; min-width:62px; line-height:1.15}
+.ci-time b{display:block; font-size:17px; font-variant-numeric:tabular-nums}
+.ci-time small{font-size:12px; color:var(--muted)}
+.ci-what{min-width:0; line-height:1.3}
+.ci-what b{display:block; font-family:var(--f-display); font-size:17.5px; color:color-mix(in srgb, var(--c) 70%, #1d1b1e)}
+.ci-what small{font-size:13px; color:var(--muted)}
+.ci-btn{
+  border:0; cursor:pointer; min-height:52px; padding:0 20px; border-radius:16px; font:inherit; font-size:16px; font-weight:800;
+  color:#fff; background:linear-gradient(135deg, #12b76a, #0b8a4f); box-shadow:0 10px 22px rgba(18,183,106,.35);
+}
+.ci-btn:active{transform:scale(.97)}
+.ci-btn:disabled{opacity:.6}
+.ci-done{display:flex; flex-direction:column; align-items:flex-end; color:#0b6b3f; font-weight:800; font-size:15.5px}
+.ci-done small, .ci-missed small{font-weight:500; font-size:11.5px; color:var(--muted)}
+.ci-later{display:flex; flex-direction:column; align-items:flex-end; font-size:12px; color:var(--muted)}
+.ci-later b{font-size:15px; color:#3a1238}
+.ci-missed{display:flex; flex-direction:column; align-items:flex-end; font-size:13px; color:#9c1d45; font-weight:700}
+
+.ci-free{display:flex; flex-direction:column; align-items:center; gap:4px; padding:28px 16px; border-radius:18px; background:#fff; border:1px dashed #d9cbe0; text-align:center}
+.ci-free span{font-size:34px}
+.ci-free b{font-size:17px}
+.ci-free small{color:var(--muted)}
+
+.ci-next{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px}
+.ci-next-day{padding:12px 14px; border-radius:16px; background:#fff; border:1px solid #ece5f0; display:flex; flex-direction:column; gap:2px}
+.ci-next-day b{font-size:14.5px; color:#3a1238; margin-bottom:2px}
+.ci-next-day small{font-size:12.5px; color:var(--muted)}
+
+/* pay */
+.ci-pay{padding:16px; border-radius:20px; background:#fff; border:1px solid #ece5f0; box-shadow:0 6px 18px rgba(58,18,56,.06)}
+.ci-pay-period{margin:0 0 12px; font-size:13px; color:var(--muted)}
+.ci-pay-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:12px}
+.ci-pay-grid div{text-align:center; padding:10px 4px; border-radius:14px; background:#f7f2fa}
+.ci-pay-grid b{display:block; font-size:24px; color:#6d1f3e}
+.ci-pay-grid small{font-size:11.5px; color:var(--muted)}
+.ci-pay dl{display:grid; grid-template-columns:1fr auto; gap:6px 12px; margin:0; font-size:14.5px}
+.ci-pay dt{color:var(--muted)}
+.ci-pay dd{margin:0; text-align:right; font-variant-numeric:tabular-nums; font-weight:600}
+.ci-pay .tot{border-top:1px solid #ece5f0; padding-top:8px; font-size:17px; color:#3a1238; font-weight:800}
+.ci-paid{margin:10px 0 0; color:#0b6b3f; font-weight:700}
+
+.ci-loading{text-align:center; color:var(--muted)}
+.ci-signout{align-self:center; margin-top:6px; border:0; background:none; color:var(--muted); font:inherit; font-size:14px; text-decoration:underline; cursor:pointer; min-height:44px; padding:0 16px}
+
+@media (max-width:420px){
+  .ci-hello{padding:18px 16px}
+  .ci-hello h1{font-size:25px}
+  .ci-ring{width:72px; height:72px}
+  .ci-class{grid-template-columns:auto 1fr; gap:10px 12px}
+  .ci-act{grid-column:1 / -1}
+  .ci-btn{width:100%}
+  .ci-done, .ci-later, .ci-missed{flex-direction:row; align-items:baseline; justify-content:center; gap:8px}
+}
+
+/* a shortcut to the student register */
+.ci-roll{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 16px; border-radius:16px; text-decoration:none;
+  background:linear-gradient(135deg, #e0f2fe, #f0f9ff); border:1px solid #bae6fd; color:#075985; font-weight:700; font-size:15px}
+.ci-roll span{font-size:20px}

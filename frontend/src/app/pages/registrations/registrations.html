@@ -1,0 +1,340 @@
+<div class="rp">
+  <!-- tabs -->
+  <div class="rp-bar">
+    <div class="rp-tabs" role="tablist">
+      <button type="button" role="tab" [class.is-on]="tab() === 'pool'" (click)="tab.set('pool')">
+        🧺 Registration pool @if (counts().pool) { <span class="rp-tab-n">{{ counts().pool }}</span> }
+      </button>
+      <button type="button" role="tab" [class.is-on]="tab() === 'form'" (click)="tab.set('form')">🔗 Form &amp; link</button>
+    </div>
+    @if (formView(); as fv) {
+      <span class="rp-state" [class.off]="!fv.form.open">{{ fv.form.open ? '● Form open' : '○ Form closed' }}</span>
+    }
+  </div>
+
+  @if (loadError()) {
+    <div class="rp-empty"><span>⚠️</span><b>{{ loadError() }}</b><button type="button" class="btn" (click)="reload()">Try again</button></div>
+  } @else if (!loaded()) {
+    <p class="rp-loading">Loading registrations…</p>
+  } @else if (tab() === 'pool') {
+
+    <!-- ================= the pool ================= -->
+    <div class="rp-stats">
+      <button type="button" class="rp-stat t-all" [class.is-on]="status() === 'all'" (click)="status.set('all')">
+        <b>{{ counts().all }}</b><small>All registrations</small></button>
+      <button type="button" class="rp-stat t-pool" [class.is-on]="status() === 'pool'" (click)="status.set('pool')">
+        <b>{{ counts().pool }}</b><small>In the pool — waiting</small></button>
+      <button type="button" class="rp-stat t-placed" [class.is-on]="status() === 'placed'" (click)="status.set('placed')">
+        <b>{{ counts().placed }}</b><small>Placed in a class</small></button>
+      <div class="rp-stat t-month"><b>{{ counts().month }}</b><small>New this month</small></div>
+    </div>
+
+    <div class="rp-tools">
+      <input type="search" class="rp-search" placeholder="🔍 Search by child's name, REG number, parent or phone…"
+             [value]="q()" (input)="q.set($any($event.target).value)" aria-label="Search registrations">
+      <select [value]="cls()" (change)="cls.set($any($event.target).value)" aria-label="Class">
+        <option value="">All classes</option>
+        @for (c of store.categories(); track c.name) { <option [value]="c.name">{{ c.name }}</option> }
+      </select>
+      <select [value]="month()" (change)="month.set($any($event.target).value)" aria-label="Month registered">
+        <option value="">Any month</option>
+        @for (m of months(); track m) { <option [value]="m">{{ monthName(m) }}</option> }
+      </select>
+      <select [value]="sort()" (change)="sort.set($any($event.target).value)" aria-label="Sort">
+        <option value="new">Newest first</option>
+        <option value="old">Oldest first</option>
+        <option value="name">Name A–Z</option>
+        <option value="age">Youngest first</option>
+      </select>
+    </div>
+
+    @if (selectedRows().length) {
+      <div class="rp-bulk">
+        <b>{{ selectedRows().length }} selected</b>
+        <button type="button" class="btn btn-primary" (click)="bulk.set(true)">🎼 Place selected in a class…</button>
+        <button type="button" class="btn btn-ghost" (click)="clearSelection()">Clear</button>
+      </div>
+    }
+
+    @if (!rows().length) {
+      <div class="rp-empty">
+        <span>🧺</span>
+        <b>No registrations yet</b>
+        <small>Share the registration link with parents — every form they send lands here.</small>
+        <button type="button" class="btn btn-primary" (click)="tab.set('form')">🔗 Get the link</button>
+      </div>
+    } @else if (!shown().length) {
+      <div class="rp-empty">
+        <span>🔍</span><b>Nothing matches</b>
+        <button type="button" class="btn" (click)="clearFilters()">Show all registrations</button>
+      </div>
+    } @else {
+      <div class="rp-list-head">
+        <label class="rp-all"><input type="checkbox" (change)="selectAllShown()"
+          [checked]="allShownSelected()"> Select all in the pool</label>
+        <small>{{ shown().length }} shown</small>
+      </div>
+      <ul class="rp-list">
+        @for (r of shown(); track r.reg.id) {
+          <li class="rp-row" [class.placed]="r.status === 'placed'" [class.sel]="isSelected(r.reg.id)" (click)="view(r)"
+              [style.--c]="store.colour(r.placed?.category || r.reg.preferredClass)">
+            @if (r.status === 'pool') {
+              <input type="checkbox" class="rp-tick" [checked]="isSelected(r.reg.id)" (click)="toggle(r.reg.id, $event)"
+                     [attr.aria-label]="'Select ' + r.reg.childName">
+            } @else { <span class="rp-tick-done" title="Placed">✓</span> }
+            <span class="rp-av">{{ initials(r.reg.childName) }}</span>
+            <div class="rp-who">
+              <b>{{ r.reg.childName }}</b>
+              <small>
+                <span class="rp-num">{{ r.reg.number }}</span>
+                @if (r.age !== null) { · Age {{ r.age }} }
+                · {{ r.reg.parentName }} · {{ r.reg.whatsapp || r.reg.phone }}
+              </small>
+              @if (r.maybeStudent) { <small class="rp-warn">⚠ Same name as student {{ r.maybeStudent }}</small> }
+            </div>
+            <div class="rp-wish">
+              @if (r.reg.preferredClass) { <span class="rp-pill">{{ r.reg.preferredClass }}</span> }
+              @for (d of r.reg.preferredDays ?? []; track d) { <span class="rp-day">{{ d.slice(0, 3) }}</span> }
+            </div>
+            <div class="rp-status">
+              @if (r.status === 'placed') {
+                <span class="rp-placed">🎼 {{ r.placed!.session || r.placed!.category }}</span>
+                <small>{{ r.placed!.day }} {{ r.placed!.time }}</small>
+              } @else {
+                <span class="rp-pool">In pool</span>
+                <small title="{{ when(r.reg.submittedAt) }}">{{ ago(r.reg.submittedAt) }}</small>
+              }
+            </div>
+            <div class="rp-act">
+              @if (r.status === 'pool') {
+                <button type="button" class="btn btn-sm btn-primary" (click)="$event.stopPropagation(); place(r)">Place in class</button>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+
+  } @else {
+
+    <!-- ================= the form ================= -->
+    @if (formView(); as fv) {
+      <div class="rf-grid">
+        <section class="rf-card rf-link">
+          <h2>🔗 Public registration link</h2>
+          <p class="rf-sub">Share it with parents on WhatsApp, email or Facebook. No account or password needed.</p>
+          <div class="rf-url">
+            <input type="text" readonly [value]="link()" (focus)="$any($event.target).select()" aria-label="Registration link">
+            <button type="button" class="btn btn-primary" (click)="copyLink()">📋 Copy</button>
+          </div>
+          <div class="rf-share">
+            <button type="button" class="btn btn-wa" (click)="copyInvite()">📋 Copy invitation message</button>
+            <a class="btn" [href]="mailShare()">✉️ Email</a>
+            <a class="btn" [href]="link() + '?preview=1'" target="_blank" rel="noopener">👀 Preview the form</a>
+          </div>
+          @if (local) {
+            <p class="rf-note">⚠ This link points to <b>this computer</b> ({{ link().split('/register')[0] }}), so it only opens here or on the same Wi-Fi.
+              Parents can use it from anywhere once the app is hosted online — the link then changes to your web address.</p>
+          }
+          <button type="button" class="rf-new" (click)="newLink()">↻ Make a new link (the old one stops working)</button>
+        </section>
+
+        <section class="rf-card rf-onoff" [class.off]="!fv.form.open">
+          <h2>{{ fv.form.open ? '🟢 Accepting registrations' : '🔴 Registrations closed' }}</h2>
+          <p class="rf-sub">{{ fv.form.open ? 'Parents can fill in the form now.' : 'Parents who open the link see your closed message.' }}</p>
+          <label class="rf-switch">
+            <input type="checkbox" [checked]="fv.form.open" (change)="setOpen($any($event.target).checked)">
+            <span></span> {{ fv.form.open ? 'Open — tap to close' : 'Closed — tap to open' }}
+          </label>
+        </section>
+
+        <section class="rf-card rf-stats">
+          <h2>📊 Submissions</h2>
+          <div class="rf-nums">
+            <div><b>{{ fv.total }}</b><small>Total</small></div>
+            <div class="pool"><b>{{ fv.inPool }}</b><small>In the pool</small></div>
+            <div class="placed"><b>{{ fv.placed }}</b><small>Placed</small></div>
+          </div>
+          <p class="rf-sub">{{ fv.lastAt ? 'Last one ' + ago(fv.lastAt) + ' · ' + when(fv.lastAt) : 'No submissions yet.' }}</p>
+          <div class="rf-share">
+            <button type="button" class="btn" (click)="download('xlsx')" [disabled]="!fv.total">📗 Download Excel</button>
+            <button type="button" class="btn" (click)="download('csv')" [disabled]="!fv.total">📄 Download CSV</button>
+          </div>
+        </section>
+
+        <section class="rf-card rf-texts">
+          <h2>✏️ What parents read</h2>
+          @if (texts(); as t) {
+            <label class="field"><span>Form title</span><input type="text" [(ngModel)]="t.title" maxlength="120"></label>
+            <label class="field"><span>Welcome text (top of the form)</span><textarea rows="3" [(ngModel)]="t.intro" maxlength="1000"></textarea></label>
+            <label class="field"><span>Thank-you message (after sending)</span><textarea rows="3" [(ngModel)]="t.thanks" maxlength="600"></textarea></label>
+            <label class="field"><span>Message when closed</span><textarea rows="2" [(ngModel)]="t.closedMessage" maxlength="600"></textarea></label>
+            <div class="rf-share">
+              <button type="button" class="btn btn-primary" (click)="saveTexts()">Save</button>
+              <button type="button" class="btn btn-ghost" (click)="texts.set(null)">Cancel</button>
+            </div>
+          } @else {
+            <dl class="rf-dl">
+              <dt>Title</dt><dd>{{ fv.form.title }}</dd>
+              <dt>Welcome</dt><dd>{{ fv.form.intro }}</dd>
+              <dt>Thank you</dt><dd>{{ fv.form.thanks }}</dd>
+              <dt>When closed</dt><dd>{{ fv.form.closedMessage }}</dd>
+            </dl>
+            <button type="button" class="btn" (click)="editTexts()">✏️ Edit texts</button>
+          }
+        </section>
+      </div>
+    }
+  }
+</div>
+
+<!-- ================= details / edit ================= -->
+@if (open(); as r) {
+  <div class="sheet-backdrop" (click)="close()"></div>
+  <aside class="sheet rd" role="dialog" aria-label="Registration">
+    <header class="sheet-head" [style.--c]="store.colour(r.placed?.category || r.reg.preferredClass)">
+      <div>
+        <h2>{{ r.reg.childName }}</h2>
+        <small>{{ r.reg.number }} · registered {{ when(r.reg.submittedAt) }}</small>
+      </div>
+      <button type="button" class="btn-icon" (click)="close()" aria-label="Close">✕</button>
+    </header>
+    <div class="sheet-body">
+      @if (editing(); as m) {
+        <!-- ---------- edit ---------- -->
+        <p class="rd-sec">🧒 Child</p>
+        <label class="field"><span>Full name *</span><input type="text" [(ngModel)]="m.childName"></label>
+        <div class="grid-2">
+          <label class="field"><span>Called</span><input type="text" [(ngModel)]="m.preferredName"></label>
+          <label class="field"><span>Date of birth *</span><input type="date" [(ngModel)]="m.dateOfBirth"></label>
+          <label class="field"><span>Gender</span><input type="text" [(ngModel)]="m.gender"></label>
+          <label class="field"><span>School</span><input type="text" [(ngModel)]="m.school"></label>
+          <label class="field"><span>Grade</span><input type="text" [(ngModel)]="m.grade"></label>
+          <label class="field"><span>Course</span><input type="text" [(ngModel)]="m.interest"></label>
+        </div>
+        <p class="rd-sec">🎵 Wishes</p>
+        <label class="field"><span>Preferred class</span>
+          <select [(ngModel)]="m.preferredClass"><option value="">Not sure</option>
+            @for (c of store.categories(); track c.name) { <option [value]="c.name">{{ c.name }}</option> }</select></label>
+        <div class="field"><span>Preferred days</span>
+          <div class="rd-days">@for (d of days; track d) {
+            <button type="button" [class.is-on]="(m.preferredDays ?? []).includes(d)" (click)="toggleDay(m, d)">{{ d.slice(0, 3) }}</button> }</div></div>
+        <label class="field"><span>Experience</span><input type="text" [(ngModel)]="m.experience"></label>
+        <p class="rd-sec">👪 Parent / guardian</p>
+        <div class="grid-2">
+          <label class="field"><span>Name *</span><input type="text" [(ngModel)]="m.parentName"></label>
+          <label class="field"><span>Relation</span><input type="text" [(ngModel)]="m.relation"></label>
+          <label class="field"><span>Mobile *</span><input type="tel" [(ngModel)]="m.phone"></label>
+          <label class="field"><span>WhatsApp</span><input type="tel" [(ngModel)]="m.whatsapp"></label>
+        </div>
+        <label class="field"><span>Email</span><input type="text" [(ngModel)]="m.email"></label>
+        <label class="field"><span>Address</span><textarea rows="2" [(ngModel)]="m.address"></textarea></label>
+        <p class="rd-sec">🩺 Health &amp; consent</p>
+        <div class="grid-2">
+          <label class="field"><span>Emergency contact</span><input type="text" [(ngModel)]="m.emergencyName"></label>
+          <label class="field"><span>Emergency number</span><input type="tel" [(ngModel)]="m.emergencyPhone"></label>
+        </div>
+        <label class="field"><span>Medical / allergies</span><textarea rows="2" [(ngModel)]="m.medical"></textarea></label>
+        <label class="check"><input type="checkbox" [(ngModel)]="m.photoConsent"> Photo &amp; video consent</label>
+        <label class="field"><span>How they heard of us</span><input type="text" [(ngModel)]="m.howHeard"></label>
+        <label class="field"><span>Parent's message</span><textarea rows="2" [(ngModel)]="m.message"></textarea></label>
+        <p class="rd-sec">🗒️ Office</p>
+        <label class="field"><span>Office note <em>parents never see this</em></span><textarea rows="2" [(ngModel)]="m.adminNote"></textarea></label>
+        @if (editError()) { <p class="rd-err" role="alert">⚠ {{ editError() }}</p> }
+        <footer class="sheet-foot">
+          <button type="button" class="btn btn-ghost" (click)="editing.set(null)">Cancel</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-primary" (click)="save(r)" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save changes' }}</button>
+        </footer>
+      } @else {
+        <!-- ---------- view ---------- -->
+        @if (r.status === 'placed') {
+          <div class="rd-placed" [style.--c]="store.colour(r.placed!.category)">
+            <b>🎼 Placed: {{ r.placed!.session || r.placed!.category }} ({{ r.placed!.category }})</b>
+            <span>{{ r.placed!.day }} {{ r.placed!.time }} · Student {{ r.placed!.studentId }}{{ r.placed!.active ? '' : ' · inactive' }}</span>
+            <button type="button" class="btn btn-sm" (click)="goToClass(r)">See on the Classes page →</button>
+          </div>
+        } @else {
+          <div class="rd-pool">
+            <b>🧺 In the registration pool</b>
+            <span>Not in a class yet.</span>
+            <button type="button" class="btn btn-primary" (click)="place(r)">🎼 Place in a class</button>
+          </div>
+        }
+        @if (r.maybeStudent) { <p class="rd-warn">⚠ There is already a student called {{ r.maybeStudent }}. Check this isn't the same child before placing.</p> }
+
+        <p class="rd-sec">🧒 Child</p>
+        <dl class="rd-dl">
+          <dt>Full name</dt><dd>{{ r.reg.childName }}</dd>
+          @if (r.reg.preferredName) { <dt>Called</dt><dd>{{ r.reg.preferredName }}</dd> }
+          <dt>Date of birth</dt><dd>{{ dob(r.reg.dateOfBirth) }}@if (r.age !== null) { <em> · age {{ r.age }}</em> }</dd>
+          <dt>Gender</dt><dd>{{ r.reg.gender || '—' }}</dd>
+          <dt>School</dt><dd>{{ r.reg.school || '—' }}{{ r.reg.grade ? ', ' + r.reg.grade : '' }}</dd>
+        </dl>
+        <p class="rd-sec">🎵 Music &amp; wishes</p>
+        <dl class="rd-dl">
+          <dt>Course</dt><dd>{{ r.reg.interest || '—' }}</dd>
+          <dt>Preferred class</dt><dd>{{ r.reg.preferredClass || 'Not sure' }}</dd>
+          <dt>Preferred days</dt><dd>{{ (r.reg.preferredDays ?? []).join(', ') || 'Any' }}</dd>
+          <dt>Experience</dt><dd>{{ r.reg.experience || '—' }}</dd>
+          <dt>Heard from</dt><dd>{{ r.reg.howHeard || '—' }}</dd>
+          @if (r.reg.message) { <dt>Message</dt><dd class="pre">{{ r.reg.message }}</dd> }
+        </dl>
+        <p class="rd-sec">👪 Parent / guardian</p>
+        <dl class="rd-dl">
+          <dt>Name</dt><dd>{{ r.reg.parentName }}{{ r.reg.relation ? ' (' + r.reg.relation + ')' : '' }}</dd>
+          <dt>Mobile</dt><dd><a [href]="'tel:' + r.reg.phone">{{ r.reg.phone }}</a></dd>
+          <dt>WhatsApp</dt><dd>{{ r.reg.whatsapp || 'Same as mobile' }}</dd>
+          <dt>Email</dt><dd>@if (r.reg.email) { <a [href]="'mailto:' + r.reg.email">{{ r.reg.email }}</a> } @else { — }</dd>
+          <dt>Address</dt><dd class="pre">{{ r.reg.address || '—' }}</dd>
+        </dl>
+        <p class="rd-sec">🩺 Health &amp; consent</p>
+        <dl class="rd-dl">
+          <dt>Emergency</dt><dd>{{ [r.reg.emergencyName, r.reg.emergencyPhone].join(' ').trim() || '—' }}</dd>
+          <dt>Medical</dt><dd class="pre" [class.alert]="r.reg.medical">{{ r.reg.medical || 'None given' }}</dd>
+          <dt>Photos</dt><dd>{{ r.reg.photoConsent ? '✅ Yes' : '❌ No' }}</dd>
+          <dt>Agreed to rules</dt><dd>{{ r.reg.agreed ? '✅ Yes' : '—' }}</dd>
+        </dl>
+        @if (r.reg.adminNote) { <p class="rd-sec">🗒️ Office note</p><p class="rd-note">{{ r.reg.adminNote }}</p> }
+        @if (r.reg.updatedAt) { <p class="hint">Last edited {{ when(r.reg.updatedAt) }}</p> }
+
+        <footer class="sheet-foot">
+          <button type="button" class="btn btn-danger" (click)="remove(r)">🗑 Delete</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn" (click)="copyNumber(r)">📋 Copy number</button>
+          <button type="button" class="btn" (click)="edit(r)">✏️ Edit</button>
+        </footer>
+      }
+    </div>
+  </aside>
+}
+
+@if (placing(); as p) {
+  <app-place-sheet [row]="p" (closed)="placing.set(null)" (placed)="onPlaced($event)" />
+}
+
+@if (bulk()) {
+  <div class="sheet-backdrop" (click)="bulk.set(false)"></div>
+  <aside class="sheet small" role="dialog" aria-label="Place selected">
+    <header class="sheet-head">
+      <div><h2>🎼 Place {{ selectedRows().length }} together</h2><small>All go to the same session</small></div>
+      <button type="button" class="btn-icon" (click)="bulk.set(false)" aria-label="Close">✕</button>
+    </header>
+    <div class="sheet-body">
+      <ul class="rb-who">@for (x of selectedRows(); track x.reg.id) { <li>{{ x.reg.childName }} <small>{{ x.reg.preferredClass || '' }}</small></li> }</ul>
+      <label class="field"><span>Session</span>
+        <select [value]="bulkSession()" (change)="bulkSession.set($any($event.target).value)">
+          <option value="">— Choose a session —</option>
+          @for (o of bulkOptions(); track o.s.name) {
+            <option [value]="o.s.name">{{ o.s.category }} · {{ o.s.name }} · {{ o.s.day }} {{ o.s.time }}{{ o.free === null ? '' : o.free <= 0 ? ' · FULL' : ' · ' + o.free + ' free' }}</option>
+          }
+        </select></label>
+      <footer class="sheet-foot">
+        <button type="button" class="btn btn-ghost" (click)="bulk.set(false)">Cancel</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-primary" [disabled]="!bulkSession() || bulkBusy()" (click)="placeSelected()">
+          {{ bulkBusy() ? 'Placing…' : 'Place them' }}</button>
+      </footer>
+    </div>
+  </aside>
+}

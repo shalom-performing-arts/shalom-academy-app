@@ -1,0 +1,34 @@
+# Automatic deploy: Google Cloud Build runs this every time the master branch changes on GitHub
+# (set up once as a trigger, see DEPLOY.md). It builds the container and rolls it out to Cloud Run.
+# The service keeps its passwords and settings between deploys; only the app itself changes.
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args: ['build', '-t', '${_IMAGE}:${SHORT_SHA}', '-t', '${_IMAGE}:latest', '.']
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ['push', '--all-tags', '${_IMAGE}']
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_IMAGE}:${SHORT_SHA}
+      - --region=${_REGION}
+      - --max-instances=1     # one copy only: the app keeps some data in memory
+      - --quiet
+
+substitutions:
+  _SERVICE: shalom
+  _REGION: asia-south1
+  _IMAGE: asia-south1-docker.pkg.dev/${PROJECT_ID}/shalom/app
+
+images: ['${_IMAGE}:${SHORT_SHA}', '${_IMAGE}:latest']
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1200s

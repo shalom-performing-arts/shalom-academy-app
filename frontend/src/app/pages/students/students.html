@@ -1,0 +1,331 @@
+<section class="panel pm">
+
+  <div class="pm-head">
+    <div>
+      <h1 class="pm-title">Students</h1>
+      <p class="pm-sub">{{ totalActive() }} active students across {{ store.sessions().length }} sessions.</p>
+    </div>
+    <div class="row-gap">
+      <button type="button" class="btn btn-sm" (click)="exportCsv()" title="Every student, with your own fields, as a CSV for Excel">Export</button>
+      <button type="button" class="btn btn-sm" (click)="openClasses()">Classes &amp; fees</button>
+      <button type="button" class="btn btn-sm" (click)="newSession()">Add a session</button>
+      <button type="button" class="btn btn-primary" (click)="newStudent()">+ Add student</button>
+    </div>
+  </div>
+
+  <!-- ============ classes at a glance ============ -->
+  <div class="st-fees">
+    @for (c of categories(); track c.name) {
+      <button type="button" class="st-fee" (click)="openClasses()" [title]="'Change ' + c.name + '’s fee or billing'">
+        <span class="st-fee-name">{{ c.name }}</span>
+        <span class="st-fee-amt">
+          @if (c.billing === 'payg') { <em>per payment</em> }
+          @else { <small>Rs.</small>{{ money(store.classFee(c.name) ?? 0) }} }
+        </span>
+        <span class="st-fee-sub">{{ counts()[c.name]?.active ?? 0 }} students · {{ billingNote(c) }}</span>
+        @if (nextChange(c.name); as ch) {
+          <span class="st-fee-next">Rs. {{ money(ch.fee) }} from {{ monthLabel(ch.from) }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <!-- ============ tabs ============ -->
+  <div class="pm-toolbar">
+    <div class="seg" role="tablist">
+      @for (c of categories(); track c.name) {
+        <button type="button" role="tab" class="cls-tab" [style.--c]="store.colour(c.name)" [class.is-on]="current() === c.name && !query()" (click)="tab.set(c.name); query.set('')">
+          {{ c.name }}
+          <small>{{ counts()[c.name]?.active ?? 0 }} students
+            @if (counts()[c.name]?.unplaced) { · <b class="warn-text">{{ counts()[c.name]?.unplaced }} to place</b> }
+          </small>
+        </button>
+      }
+    </div>
+    <div class="pm-filters">
+      <input type="search" class="search" placeholder="Find a student, parent, family or phone…"
+             [value]="query()" (input)="query.set($any($event.target).value)">
+      <label class="switch"><input type="checkbox" [ngModel]="showInactive()" (ngModelChange)="showInactive.set($event)">
+        <span></span>Show inactive</label>
+    </div>
+  </div>
+
+  <!-- ============ sessions ============ -->
+  @for (g of groups(); track g.key) {
+    <div class="card pm-group" [style.--c]="store.colour(g.session?.category || current())" [class.st-unplaced]="!g.session && currentUsesSessions() && !query()">
+      <div class="pm-ghead">
+        <div class="pm-gname">
+          <b>{{ g.title }}</b>
+          @if (g.session) {
+            @if (g.session.meaning) { <i>{{ g.session.meaning }}</i> }
+            <span>{{ g.session.day }} {{ g.session.time }}</span>
+          } @else if (currentUsesSessions() && !query()) {
+            <span class="warn-text">Open a student and pick their session.</span>
+          }
+        </div>
+        <div class="pm-gstats">
+          @if (g.session) {
+            @if (g.session.max) {
+              <span class="pill-soft" [class.warn]="g.active > g.session.max">{{ g.active }} of {{ g.session.max }} · {{ freeLabel(g.active, g.session.max) }}</span>
+              <i class="bar bar-sm" [class.over]="g.active > g.session.max"><span [style.width]="fill(g.active, g.session.max)"></span></i>
+            } @else {
+              <span class="pill-soft">{{ g.active }} students</span>
+            }
+            <button type="button" class="btn-icon" (click)="editSession(g.session)">Edit session</button>
+            <button type="button" class="btn-icon" (click)="newStudent(g.session)">+ Add</button>
+          }
+        </div>
+      </div>
+
+      <div class="st-rows">
+        @for (s of g.students; track s.id; let i = $index) {
+          <div class="st-row" [class.is-off]="!s.active">
+            <span class="st-no">{{ i + 1 }}</span>
+            <button type="button" class="pm-who" (click)="edit(s)">
+              <b>{{ s.name }}@if (isBirthday(s)) { <span class="st-bday" title="Birthday today!">🎂</span> }</b>
+              <small>{{ s.id }}@if (query()) { · {{ s.category }} {{ s.session }} }@if (s.country) { · {{ s.country }} }@if (s.family) { · <span class="fam">{{ s.family }} family</span> }</small>
+            </button>
+            <span class="st-contact">
+              @if (s.parent) { <span>{{ s.parent }}</span> }
+              @if (s.phone) { <a [href]="'tel:' + s.phone">{{ s.phone }}</a> }
+              @for (f of listFields(); track f.key) {
+                @if (fieldValue(s, f)) { <span class="st-field"><b>{{ f.label }}</b> {{ fieldValue(s, f) }}</span> }
+              }
+              @if (s.note) { <em>{{ s.note }}</em> }
+            </span>
+            <span class="st-fee-cell" [class.special]="s.specialFee !== null" [class.free]="s.fee === 0"
+                  [title]="s.specialFee !== null ? 'Special fee — the class fee is Rs. ' + money(store.classFee(s.category) ?? 0) : 'Class fee'">
+              {{ feeFor(s) }}
+              @if (s.specialFee !== null && s.fee !== 0) { <small>special</small> }
+            </span>
+            <label class="switch" [title]="s.active ? 'Active — click to set inactive' : 'Inactive — click to set active'">
+              <input type="checkbox" [checked]="s.active" (click)="$event.preventDefault(); toggleActive(s)">
+              <span></span>{{ s.active ? 'Active' : 'Inactive' }}
+            </label>
+            <button type="button" class="btn-icon" (click)="edit(s)">Edit</button>
+          </div>
+        } @empty {
+          <p class="hint st-empty">No students in this session yet.
+            @if (g.session) { <button type="button" class="link" (click)="newStudent(g.session)">Add one</button> }</p>
+        }
+      </div>
+    </div>
+  } @empty {
+    <div class="card pm-empty">
+      @if (query()) { No student matches “{{ query() }}”. }
+      @else {
+        No students in {{ current() }} yet.
+        <button type="button" class="link" (click)="newStudent()">Add one</button>
+        @if (currentUsesSessions()) { or <button type="button" class="link" (click)="newSession()">add a session</button> }
+      }
+    </div>
+  }
+</section>
+
+<!-- ============ student editor ============ -->
+@if (editing(); as e) {
+  <div class="sheet-backdrop" (click)="editing.set(null)"></div>
+  <aside class="sheet" role="dialog" aria-modal="true" [attr.aria-label]="e.id ? 'Edit student' : 'Add student'">
+    <header class="sheet-head">
+      <div>
+        <h2>{{ e.id ? e.form.name || 'Student' : 'New student' }}</h2>
+        <small>{{ e.id ?? 'The next academy number is given on saving' }}</small>
+      </div>
+      <button type="button" class="btn-icon" (click)="editing.set(null)" aria-label="Close">✕</button>
+    </header>
+
+    <form class="sheet-body" (submit)="$event.preventDefault(); save()">
+      <label class="field"><span>Full name</span>
+        <input #nameBox type="text" autocomplete="off" [ngModel]="e.form.name" name="name" (ngModelChange)="patch({ name: $event })"></label>
+
+      <div class="grid-2">
+        <label class="field"><span>Class</span>
+          <select [ngModel]="e.form.category" name="category" (ngModelChange)="setCategory($event)">
+            @for (c of categories(); track c.name) { <option [value]="c.name">{{ c.name }}</option> }
+          </select></label>
+        @if (store.usesSessions(e.form.category)) {
+          <label class="field"><span>Session</span>
+            <select [ngModel]="e.form.session" name="session" (ngModelChange)="patch({ session: $event })">
+              <option value="">— not placed yet —</option>
+              @for (s of sessionChoices(); track s.name) { <option [value]="s.name">{{ s.name }} · {{ s.day }} {{ s.time }}</option> }
+            </select></label>
+        } @else {
+          <label class="field"><span>Country</span>
+            <input type="text" [ngModel]="e.form.country" name="country" (ngModelChange)="patch({ country: $event })"></label>
+        }
+      </div>
+
+      <label class="field">
+        <span>Special fee <em>(blank = the {{ e.form.category }} class fee{{ store.classFee(e.form.category) !== null ? ' of Rs. ' + money(store.classFee(e.form.category)) : '' }})</em></span>
+        <input type="number" min="0" step="any" [placeholder]="store.classFee(e.form.category) === null ? 'per payment' : money(store.classFee(e.form.category))"
+               [ngModel]="e.form.specialFee" name="specialFee" (ngModelChange)="patch({ specialFee: $event })">
+      </label>
+      <p class="hint">Type <b>0</b> for a free place. A special fee is never given the sibling discount.</p>
+
+      <label class="field"><span>Family <em>(brothers and sisters share one — used for the sibling discount)</em></span>
+        <input type="text" list="familyList" placeholder="e.g. Perera" [ngModel]="e.form.family" name="family" (ngModelChange)="patch({ family: $event })">
+        <datalist id="familyList">@for (f of families(); track f) { <option [value]="f"></option> }</datalist></label>
+
+      <div class="grid-2">
+        <label class="field"><span>Parent / guardian</span>
+          <input type="text" placeholder="e.g. Mrs. Perera" [ngModel]="e.form.parent" name="parent" (ngModelChange)="patch({ parent: $event })"></label>
+        <label class="field"><span>Phone / WhatsApp</span>
+          <input type="text" inputmode="tel" [ngModel]="e.form.phone" name="phone" (ngModelChange)="patch({ phone: $event })"></label>
+      </div>
+
+      <label class="field"><span>🎂 Date of birth <em>(for the birthday card on Today's special)</em></span>
+        <input type="date" [max]="todayIso" [ngModel]="e.form.dateOfBirth" name="dob" (ngModelChange)="patch({ dateOfBirth: $event })">
+        @if (age(e.form.dateOfBirth); as a) { <small class="st-age">Age {{ a }}</small> }
+      </label>
+
+      @if (fields().length) {
+        <div class="grid-2">
+          @for (f of fields(); track f.key) {
+            <label class="field"><span>{{ f.label }}</span>
+              @if (f.type === 'select') {
+                <select [ngModel]="customValue(e.form, f.key)" [name]="'f_' + f.key" (ngModelChange)="setCustom(f.key, $event)">
+                  <option value="">—</option>
+                  @for (o of f.options; track o) { <option [value]="o">{{ o }}</option> }
+                </select>
+              } @else {
+                <input [type]="inputType(f)" [ngModel]="customValue(e.form, f.key)" [name]="'f_' + f.key"
+                       (ngModelChange)="setCustom(f.key, $event ?? '')">
+              }
+            </label>
+          }
+        </div>
+      }
+
+      <label class="field"><span>Notes</span>
+        <input type="text" placeholder="e.g. comes at 12 pm" [ngModel]="e.form.note" name="note" (ngModelChange)="patch({ note: $event })"></label>
+
+      <label class="switch big"><input type="checkbox" [ngModel]="e.form.active" name="active" (ngModelChange)="patch({ active: $event })">
+        <span></span>{{ e.form.active ? 'Active — pays a fee each month' : 'Inactive — no fee; history kept' }}</label>
+
+      <footer class="sheet-foot">
+        @if (e.id) { <button type="button" class="btn btn-sm btn-ghost danger-text" (click)="remove()">Delete</button> }
+        <span class="spacer"></span>
+        <button type="button" class="btn" (click)="editing.set(null)">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : e.id ? 'Save' : 'Add student' }}</button>
+      </footer>
+    </form>
+  </aside>
+}
+
+<!-- ============ session editor ============ -->
+@if (sessionEdit(); as s) {
+  <div class="sheet-backdrop" (click)="sessionEdit.set(null)"></div>
+  <aside class="sheet small" role="dialog" aria-modal="true" aria-label="Session">
+    <header class="sheet-head">
+      <div><h2>{{ s.create ? 'New session' : s.name }}</h2><small>{{ s.category }}</small></div>
+      <button type="button" class="btn-icon" (click)="sessionEdit.set(null)" aria-label="Close">✕</button>
+    </header>
+    <form class="sheet-body" (submit)="$event.preventDefault(); saveSession()">
+      <div class="grid-2">
+        <label class="field"><span>Name</span>
+          <input type="text" placeholder="e.g. Allegretto" [ngModel]="s.rename" name="name" (ngModelChange)="patchSession({ rename: $event })"></label>
+        <label class="field"><span>Class</span>
+          <select [ngModel]="s.category" name="category" (ngModelChange)="patchSession({ category: $event })" [disabled]="!s.create">
+            @for (c of categories(); track c.name) { @if (c.usesSessions) { <option [value]="c.name">{{ c.name }}</option> } }
+          </select></label>
+      </div>
+      @if (!s.create && s.rename.trim() && s.rename.trim() !== s.name) {
+        <p class="hint">Renaming moves its students with it, and past months show the new name.</p>
+      }
+      <label class="field"><span>What it means</span>
+        <input type="text" placeholder="e.g. moderately fast" [ngModel]="s.meaning" name="meaning" (ngModelChange)="patchSession({ meaning: $event })"></label>
+      <div class="grid-2">
+        <label class="field"><span>Day</span>
+          <select [ngModel]="s.day" name="day" (ngModelChange)="patchSession({ day: $event })">
+            @for (d of DAYS; track d) { <option [value]="d">{{ d }}</option> }
+          </select></label>
+        <label class="field"><span>Time</span>
+          <input type="text" placeholder="3:30 - 4:30 PM" [ngModel]="s.time" name="time" (ngModelChange)="patchSession({ time: $event })"></label>
+      </div>
+      <label class="field"><span>Most students <em>(places free are worked out from this)</em></span>
+        <input type="number" min="0" step="1" [ngModel]="s.max" name="max" (ngModelChange)="patchSession({ max: $event })"></label>
+      <footer class="sheet-foot">
+        @if (!s.create) { <button type="button" class="btn btn-sm btn-ghost danger-text" (click)="deleteSession()">Delete</button> }
+        <span class="spacer"></span>
+        <button type="button" class="btn" (click)="sessionEdit.set(null)">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      </footer>
+    </form>
+  </aside>
+}
+
+<!-- ============ classes & fees ============ -->
+@if (classes(); as list) {
+  <div class="sheet-backdrop" (click)="classes.set(null)"></div>
+  <aside class="sheet wide" role="dialog" aria-modal="true" aria-label="Classes and fees">
+    <header class="sheet-head">
+      <div><h2>Classes &amp; fees</h2><small>How each class is billed. Earlier months keep what they had.</small></div>
+      <button type="button" class="btn-icon" (click)="classes.set(null)" aria-label="Close">✕</button>
+    </header>
+    <form class="sheet-body" (submit)="$event.preventDefault(); saveClasses()">
+      @for (c of list; track c.key; let i = $index; let last = $last) {
+        <div class="cl-card">
+          <div class="cl-top">
+            <input class="cl-name" type="text" placeholder="Class name" [ngModel]="c.name" [name]="'n' + c.key"
+                   (ngModelChange)="patchClass(c.key, { name: $event })" aria-label="Class name">
+            <button type="button" class="btn-icon" [disabled]="i === 0" (click)="moveClass(i, -1)" aria-label="Move up">↑</button>
+            <button type="button" class="btn-icon" [disabled]="last" (click)="moveClass(i, 1)" aria-label="Move down">↓</button>
+            <button type="button" class="btn-icon danger" [disabled]="c.students > 0" (click)="removeClass(c)"
+                    [title]="c.students ? 'Move its students and sessions to another class first' : 'Remove this class'">Remove</button>
+          </div>
+          @if (c.from && c.name.trim() && c.name.trim() !== c.from) {
+            <p class="hint cl-hint">Renaming from {{ c.from }}: its students, sessions and past months move with it.</p>
+          }
+
+          <div class="cl-grid">
+            <label class="field"><span>Billing</span>
+              <select [ngModel]="c.billing" [name]="'b' + c.key" (ngModelChange)="setBilling(c, $event)">
+                <option value="monthly">Every month</option>
+                <option value="term">Per term (chosen months)</option>
+                <option value="payg">Pay as you go (no set fee)</option>
+              </select></label>
+            @if (c.billing !== 'payg') {
+              <label class="field"><span>{{ c.billing === 'term' ? 'Fee per term' : 'Monthly fee' }}</span>
+                <input type="number" min="0" step="any" [ngModel]="c.fee" [name]="'f' + c.key" (ngModelChange)="patchClass(c.key, { fee: $event })"></label>
+            }
+            <label class="switch cl-sess"><input type="checkbox" [ngModel]="c.usesSessions" [name]="'s' + c.key"
+                   (ngModelChange)="patchClass(c.key, { usesSessions: $event })"><span></span>Has sessions</label>
+          </div>
+
+          @if (c.billing === 'term') {
+            <div class="cl-months" role="group" aria-label="Months the term fee is due">
+              @for (m of MONTHS_SHORT; track m; let mi = $index) {
+                <button type="button" [class.is-on]="c.termMonths.includes(mi + 1)" (click)="toggleTermMonth(c, mi + 1)">{{ m }}</button>
+              }
+            </div>
+            <p class="hint cl-hint">The term fee is due in the highlighted months; other months show “Not due”.</p>
+          }
+
+          @if (c.billing !== 'payg') {
+            <div class="cl-changes">
+              @for (ch of c.changes; track $index; let ci = $index) {
+                <div class="cl-change">
+                  <span>New fee</span>
+                  <input type="number" min="0" step="any" [ngModel]="ch.fee" [name]="'cf' + c.key + '_' + ci"
+                         (ngModelChange)="patchChange(c, ci, { fee: $event })" aria-label="New fee">
+                  <span>from</span>
+                  <input type="month" [ngModel]="ch.from" [name]="'cm' + c.key + '_' + ci"
+                         (ngModelChange)="patchChange(c, ci, { from: $event })" aria-label="From month">
+                  <button type="button" class="btn-icon danger" (click)="removeChange(c, ci)">Remove</button>
+                </div>
+              }
+              <button type="button" class="link" (click)="addChange(c)">+ Schedule a fee change</button>
+            </div>
+          }
+        </div>
+      }
+      <button type="button" class="btn btn-sm" (click)="addClass()">+ Add a class</button>
+
+      <footer class="sheet-foot">
+        <span class="spacer"></span>
+        <button type="button" class="btn" (click)="classes.set(null)">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save classes' }}</button>
+      </footer>
+    </form>
+  </aside>
+}

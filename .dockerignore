@@ -1,0 +1,12 @@
+# Kept out of the container (the same as .gcloudignore), for a local `docker build` too.
+.git
+**/node_modules
+**/.angular
+**/dist
+**/target
+backend/data
+backend/data-backup-*
+*.xlsx
+*.csv
+samples
+*.log

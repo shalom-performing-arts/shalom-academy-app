@@ -1,0 +1,310 @@
+:host{display:block}
+.tc{display:flex; flex-direction:column; gap:16px}
+
+/* ---- period + tabs ---- */
+.tc-bar{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
+.tc-period{display:flex; align-items:center; gap:10px}
+.tc-period-label{text-align:center; line-height:1.2; min-width:210px}
+.tc-period-label strong{display:block; font-family:var(--f-display); font-size:21px; color:#3a1238; letter-spacing:.5px}
+.tc-period-label small{font-size:12.5px; color:var(--muted)}
+.tc-tabs{display:flex; gap:6px; padding:5px; border-radius:16px; background:#fff; border:1px solid #ece5f0; box-shadow:0 4px 12px rgba(58,18,56,.05)}
+.tc-tabs button{border:0; cursor:pointer; padding:9px 16px; border-radius:12px; background:none; font:inherit; font-size:14.5px; font-weight:600; color:#5b4660; min-height:42px}
+.tc-tabs button.is-on{background:linear-gradient(135deg, #ff8a65, #e8457c); color:#fff; box-shadow:0 6px 16px rgba(232,69,124,.3)}
+
+/* ---- teacher cards ---- */
+.tc-people{display:grid; grid-template-columns:repeat(auto-fill, minmax(275px, 1fr)); gap:12px}
+.tc-person{
+  --t:#8e2b52; display:flex; align-items:center; gap:12px; padding:14px; border-radius:18px; background:#fff;
+  border:1px solid color-mix(in srgb, var(--t) 22%, #fff); border-left:6px solid var(--t);
+  box-shadow:0 8px 22px color-mix(in srgb, var(--t) 10%, transparent);
+}
+.tc-person.total{--t:#3a1238; background:linear-gradient(135deg, #3a1238, #74204f); color:#fff; border:0}
+.tc-person.total small{color:rgba(255,255,255,.75) !important}
+.tc-person.total .tc-avatar{background:rgba(255,255,255,.2)}
+.tc-avatar{
+  flex:none; width:42px; height:42px; border-radius:50%; display:grid; place-items:center;
+  background:var(--t, #8e2b52); color:#fff; font-weight:800; font-size:17px;
+  box-shadow:0 6px 14px color-mix(in srgb, var(--t, #8e2b52) 35%, transparent);
+}
+.tc-person-text{flex:1; min-width:0; line-height:1.25}
+.tc-person-text b{display:block; font-size:16px}
+.tc-person-text small, .tc-person-pay small{font-size:12px; color:var(--muted); white-space:nowrap}
+.tc-person-pay{text-align:right; line-height:1.25}
+.tc-person-pay b{display:block; font-size:16.5px; font-variant-numeric:tabular-nums}
+
+/* ---- attendance ---- */
+.tc-legend{display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; font-size:13px; color:var(--muted)}
+.tc-legend i{font-style:normal; display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; margin-right:4px; font-size:11px}
+.lg-self{background:#e3f6ec} .lg-office{background:#efe8f3; color:#5b4660; font-weight:800}
+.tc-legend-rates{margin-left:auto}
+.tc-more{align-self:center; border:1px dashed #d6c6dc; background:#fff; color:#6d1f3e; font:inherit; font-size:13.5px; font-weight:600; padding:9px 18px; border-radius:999px; cursor:pointer}
+
+.tc-days{display:flex; flex-direction:column; gap:14px}
+.tc-day{border-radius:20px; background:#fff; border:1px solid #ece5f0; overflow:hidden; box-shadow:0 8px 24px rgba(58,18,56,.05); scroll-margin-top:100px}
+.tc-day.is-today{border:2px solid #e8457c; box-shadow:0 14px 34px rgba(232,69,124,.18)}
+.tc-day.is-future{opacity:.88}
+.tc-day.is-off .tc-classes{opacity:.45}
+.tc-day-head{display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 16px; background:linear-gradient(90deg, #f3f6ff, #fff 70%); border-bottom:1px solid #eef0f7}
+.tc-day.is-weekend .tc-day-head{background:linear-gradient(90deg, #fff4e3, #fff 70%); border-bottom-color:#f6ead6}
+.tc-day.is-today .tc-day-head{background:linear-gradient(90deg, #ffe4ee, #fff 70%)}
+.tc-date{flex:none; width:52px; height:52px; border-radius:14px; display:grid; place-content:center; text-align:center; line-height:1;
+  background:#fff; box-shadow:0 4px 12px rgba(58,18,56,.1)}
+.tc-date b{font-size:21px; color:#3a1238}
+.tc-date small{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted)}
+.tc-day-name{flex:1; min-width:0; line-height:1.3}
+.tc-day-name b{display:block; font-family:var(--f-display); font-size:18px; color:#3a1238; letter-spacing:.4px}
+.tc-day-name small{font-size:12.5px; color:var(--muted)}
+.tc-today{font-style:normal; font-family:var(--f-body, inherit); font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase;
+  padding:2px 8px; border-radius:999px; background:#e8457c; color:#fff; vertical-align:3px; margin-left:6px}
+.tc-kind{display:inline-block; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:700; background:#e2ecff; color:#22479c; margin-right:4px}
+.tc-kind.we{background:#ffe9c7; color:#8a5300}
+.tc-hol{font-size:12.5px; font-weight:700; padding:5px 12px; border-radius:999px; background:#fff6dc; color:#7a5a12}
+.tc-hol.off{background:#eceaee; color:#5b4660}
+
+.tc-classes{display:flex; flex-direction:column}
+.tc-class{--c:#8e2b52; display:flex; align-items:center; flex-wrap:wrap; gap:10px 16px; padding:11px 16px; border-top:1px solid #f4f0f6; border-left:5px solid var(--c)}
+.tc-class:first-child{border-top:0}
+.tc-class.removed{background:#fffaf0}
+.tc-class-info{min-width:170px; flex:1 1 170px; line-height:1.3}
+.tc-class-info b{display:block; font-size:15.5px; color:color-mix(in srgb, var(--c) 72%, #1d1b1e)}
+.tc-class-info b i{font-weight:500; font-size:13px; color:var(--muted); margin-left:4px}
+.tc-class-info small{font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums}
+.tc-who{display:flex; flex-wrap:wrap; gap:8px}
+.tc-tick{
+  --t:#8e2b52; display:inline-flex; align-items:center; gap:7px; min-height:40px; padding:4px 14px 4px 4px; border-radius:999px; cursor:pointer;
+  border:1.5px solid color-mix(in srgb, var(--t) 30%, #fff); background:#fff; color:#5b4660; font:inherit; font-size:13.5px; font-weight:600;
+  transition:transform .1s, background .15s;
+}
+.tc-tick:hover:not(:disabled){transform:translateY(-1px)}
+.tc-tick i{font-style:normal; width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-size:13px; font-weight:800;
+  background:color-mix(in srgb, var(--t) 12%, #fff); color:var(--t)}
+.tc-tick.on{background:var(--t); border-color:var(--t); color:#fff; box-shadow:0 6px 14px color-mix(in srgb, var(--t) 30%, transparent)}
+.tc-tick.on i{background:rgba(255,255,255,.25); color:#fff}
+.tc-tick.self i{background:#fff}
+.tc-tick small{font-size:11px; font-weight:500; opacity:.85}
+.tc-tick:disabled{opacity:.45; cursor:not-allowed}
+/* checked in but not marked done: a dashed amber edge until the teacher or the office confirms */
+.tc-tick.on.waiting{background:#fff7e8; color:#8a5300; border:1.5px dashed #f0a020; box-shadow:none}
+.tc-tick.on.waiting i{background:#ffe6b8}
+.lg-wait{background:#fff1d6}
+.tc-note{flex-basis:100%; margin:-2px 0 0; padding:6px 10px; border-radius:10px; border-left:3px solid var(--t, #8e2b52);
+  background:#faf7fc; font-size:13px; font-style:italic; color:#5b4660}
+.tc-note b{font-style:normal; color:var(--t, #3a1238)}
+
+/* ---- salary ---- */
+.tc-rule{margin-top:-6px}
+.tc-sal-list{display:flex; flex-direction:column; gap:10px}
+.tc-sal{
+  --t:#8e2b52; display:grid; grid-template-columns:150px repeat(3, minmax(100px, 1fr)) minmax(190px, 1.4fr) 130px 130px; gap:12px; align-items:center;
+  padding:12px 14px; border-radius:16px; border:1px solid #ece5f0; border-left:6px solid var(--t); background:#fff;
+}
+.tc-sal.paid{background:linear-gradient(90deg, #f0faf4, #fff)}
+.tc-sal-who{display:flex; align-items:center; gap:10px}
+.tc-sal-who b{font-size:16px}
+.tc-sal-cell, .tc-sal-total{display:flex; flex-direction:column; line-height:1.3}
+.tc-sal-cell small, .tc-sal-total small{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px}
+.tc-sal-cell b{font-size:14.5px; font-variant-numeric:tabular-nums}
+.tc-sal-cell em{font-style:normal; font-size:12.5px; color:var(--muted)}
+.tc-sal-cell.adj{gap:4px}
+.tc-sal-cell.adj input{padding:6px 9px; font-size:13.5px}
+.tc-sal-total b{font-size:18px; color:#3a1238; font-variant-numeric:tabular-nums}
+.tc-paid-btn{width:100%; min-height:40px; border-radius:12px; border:1.5px dashed #c9b6d2; background:#fff; color:#6d1f3e; font:inherit; font-size:13.5px; font-weight:700; cursor:pointer}
+.tc-paid-btn.on{border:0; background:#e3f6ec; color:#0b6b3f}
+.tc-sal-sum{display:flex; flex-wrap:wrap; gap:6px 20px; align-items:baseline; justify-content:flex-end; margin-top:14px; padding-top:12px; border-top:2px solid #3a1238; font-size:13.5px; color:var(--muted)}
+.tc-sal-sum b{font-size:20px; color:#3a1238}
+
+/* ---- setup ---- */
+.tc-setup{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; align-items:start}
+.tc-wide{grid-column:1 / -1}
+.tc-save{display:flex; flex-wrap:wrap; align-items:center; gap:8px; justify-content:flex-end; margin-top:14px; padding-top:12px; border-top:1px solid #f1eaf4}
+.tc-tlist{display:flex; flex-direction:column; gap:8px}
+.tc-trow{--t:#8e2b52; display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:14px; border:1px solid #ece5f0}
+.tc-trow.off{opacity:.6}
+.tc-trow-text{flex:1; min-width:0; line-height:1.3}
+.tc-trow-text b{display:block; font-size:15px}
+.tc-trow-text em{font-style:normal; font-size:11px; padding:1px 7px; border-radius:999px; background:#eee; color:#666; margin-left:4px}
+.tc-trow-text small{font-size:12.5px; color:var(--muted)}
+.tc-trow-act{display:flex; gap:6px}
+.tc-dayh{margin:14px 0 6px; font-family:var(--f-display); font-size:15px; color:#6d1f3e; letter-spacing:.5px}
+.tc-slot{--c:#8e2b52; display:grid; grid-template-columns:130px 140px 95px 1fr 1.3fr 36px; gap:8px; align-items:center; padding:6px 8px; border-left:4px solid var(--c); border-radius:8px; background:#fcfafd; margin-bottom:6px}
+.tc-slot input, .tc-slot select{padding:7px 9px; font-size:13.5px}
+.tc-holrow{display:grid; grid-template-columns:160px 1fr auto 36px; gap:10px; align-items:center; margin-bottom:8px}
+.tc-holrow.past{opacity:.55}
+.tc-holrow .switch em{font-style:normal; font-size:13px; min-width:110px}
+.tc-colours{display:flex; gap:10px; flex-wrap:wrap}
+.tc-colours button{width:36px; height:36px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 0 1px #ddd; cursor:pointer}
+.tc-colours button.on{box-shadow:0 0 0 3px #3a1238}
+.tc-pin{margin:6px 0 14px; text-align:center; font-size:54px; font-weight:800; letter-spacing:14px; color:#3a1238;
+  padding:18px; border-radius:20px; background:linear-gradient(135deg, #fff0f6, #f3e8ff); font-variant-numeric:tabular-nums}
+
+/* ---- phones ---- */
+@media (max-width:1100px){
+  .tc-sal{grid-template-columns:1fr 1fr 1fr; }
+  .tc-sal-who{grid-column:1 / -1}
+  .tc-sal-cell.adj{grid-column:1 / -1; flex-direction:row; flex-wrap:wrap}
+  .tc-sal-cell.adj small{flex-basis:100%}
+  .tc-sal-cell.adj input{flex:1 1 120px}
+  .tc-sal-total{grid-column:1 / 3}
+}
+@media (max-width:900px){
+  .tc-setup{grid-template-columns:1fr}
+}
+@media (max-width:720px){
+  .tc-bar{flex-direction:column; align-items:stretch}
+  .tc-period{justify-content:space-between}
+  .tc-period-label{min-width:0; flex:1}
+  .tc-period-label strong{font-size:18px}
+  .tc-tabs{justify-content:space-between}
+  .tc-tabs button{flex:1; padding:8px 6px; font-size:13.5px}
+  .tc-people{grid-template-columns:1fr 1fr; gap:8px}
+  .tc-person{flex-wrap:wrap; padding:10px; gap:8px}
+  .tc-person .tc-avatar{width:34px; height:34px; font-size:14px}
+  .tc-person-pay{text-align:left; flex-basis:100%}
+  .tc-legend-rates{margin-left:0}
+  .tc-day-head{padding:10px 12px}
+  .tc-class{padding:10px 12px; flex-direction:column; align-items:stretch}
+  .tc-class-info{flex:none; min-width:0}
+  .tc-who{gap:6px}
+  .tc-tick{flex:1 1 auto; justify-content:flex-start; min-height:44px}
+  .tc-sal{grid-template-columns:1fr 1fr}
+  .tc-sal-total{grid-column:1}
+  .tc-slot{grid-template-columns:1fr 1fr; padding:8px}
+  .tc-slot button{justify-self:end}
+  .tc-holrow{grid-template-columns:1fr 36px; }
+  .tc-holrow input[type=text]{grid-column:1 / -1; grid-row:2}
+  .tc-holrow .switch{grid-column:1 / -1}
+  .tc-trow{flex-wrap:wrap}
+  .tc-trow-act{width:100%}
+  .tc-trow-act .btn{flex:1; justify-content:center}
+  .tc-pin{font-size:44px; letter-spacing:10px}
+}
+
+/* =========================================================
+   The one-page grid: the weekly classes down, the weeks across
+   ========================================================= */
+.tc-layout{display:flex; gap:4px; padding:4px; border-radius:12px; background:#fff; border:1px solid #ece5f0}
+.tc-layout button{border:0; cursor:pointer; padding:6px 12px; border-radius:9px; background:none; font:inherit; font-size:13.5px; font-weight:700; color:#6f5a76}
+.tc-layout button.is-on{background:#3a1238; color:#fff}
+
+.tg-wrap{overflow-x:auto; border-radius:20px; background:#fff; border:1px solid #ece5f0; box-shadow:0 10px 28px rgba(58,18,56,.07)}
+.tg{width:100%; border-collapse:separate; border-spacing:0; font-size:13px}
+.tg th, .tg td{border-bottom:1px solid #f1ecf4}
+.tg thead th{position:sticky; top:0; z-index:2; background:#faf7fc; padding:10px 8px; text-align:center; border-bottom:2px solid #e6dcea}
+.tg thead th.tg-class{text-align:left; padding-left:16px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#7a4a68}
+.tg-week b{display:block; font-size:13px; color:#3a1238}
+.tg-week small{font-size:11px; color:var(--muted); font-weight:500}
+.tg-week.now{background:linear-gradient(180deg, #ffe4ee, #faf7fc) !important}
+.tg-week.now b{color:#d6336c}
+
+.tg-dayrow td{padding:7px 16px; background:linear-gradient(90deg, #f3f6ff, #fff 70%); font-family:var(--f-display); font-weight:700;
+  font-size:14px; color:#3a1238; letter-spacing:.6px}
+.tg-dayrow.we td{background:linear-gradient(90deg, #fff4e3, #fff 70%)}
+.tg-dayrow em{font-family:var(--f-body, inherit); font-style:normal; font-weight:600; font-size:11px; letter-spacing:.3px; color:var(--muted); margin-left:8px}
+
+.tg-row .tg-class{--c:#8e2b52; text-align:left; padding:8px 10px 8px 12px; border-left:5px solid var(--c); white-space:nowrap; min-width:150px; background:#fff}
+.tg-row .tg-class b{display:block; font-size:14px; color:color-mix(in srgb, var(--c) 72%, #1d1b1e)}
+.tg-row .tg-class b i{font-weight:500; font-style:italic; font-size:12px; color:var(--muted); margin-left:6px}
+.tg-row .tg-class small{font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums}
+
+.tg-cell{padding:6px 8px; text-align:center; vertical-align:middle; min-width:132px; border-left:1px solid #f4f0f6}
+.tg-cell.today{background:#fff3f7; box-shadow:inset 0 0 0 2px #f6b3cb}
+.tg-cell.future{opacity:.75}
+.tg-cell.off{background:repeating-linear-gradient(135deg, #f4f2f5 0 6px, #fbfafc 6px 12px)}
+.tg-cell.none{background:#fcfbfd}
+.tg-date{display:block; font-size:10.5px; font-weight:700; color:#9a8aa0; margin-bottom:4px; text-transform:uppercase; letter-spacing:.4px}
+.tg-cell.today .tg-date{color:#d6336c}
+.tg-ticks{display:inline-flex; gap:5px}
+.tg-tick{
+  --t:#8e2b52; width:30px; height:30px; border-radius:50%; cursor:pointer; padding:0;
+  border:1.5px solid color-mix(in srgb, var(--t) 35%, #fff); background:#fff;
+  color:color-mix(in srgb, var(--t) 70%, #fff); font:inherit; font-size:12.5px; font-weight:800; transition:transform .08s;
+}
+.tg-tick:hover:not(:disabled){transform:scale(1.1)}
+.tg-tick.on{background:var(--t); border-color:var(--t); color:#fff; box-shadow:0 3px 8px color-mix(in srgb, var(--t) 35%, transparent)}
+.tg-tick.on.self{font-size:15px}
+.tg-tick.on.waiting{background:#fff7e8; color:#8a5300; border:1.5px dashed #f0a020; box-shadow:none; font-size:18px; line-height:1}
+.tg-tick:disabled{opacity:.35; cursor:not-allowed}
+
+.tg-sum{padding:6px 12px; white-space:nowrap; text-align:left; border-left:2px solid #ece5f0; background:#fcfafd}
+.tg-sum span{display:inline-block; margin-right:6px; padding:2px 7px; border-radius:999px; font-size:11.5px; font-weight:800;
+  background:color-mix(in srgb, var(--t) 14%, #fff); color:color-mix(in srgb, var(--t) 80%, #000)}
+.tg-key{margin:2px 4px 0; font-size:12.5px; color:var(--muted)}
+
+@media (max-width:720px){
+  .tg-row .tg-class{min-width:118px; position:sticky; left:0; z-index:1}
+  .tg-cell{min-width:118px}
+  .tg-tick{width:30px; height:30px}
+}
+
+/* compact rows, so a whole pay period fits on one screen */
+.tg thead th{padding:7px 6px}
+.tg-dayrow td{padding:4px 16px; font-size:13px}
+.tg-row .tg-class{padding:4px 10px 4px 12px}
+.tg-row .tg-class b{font-size:13.5px; line-height:1.2}
+.tg-row .tg-class small{font-size:11.5px}
+.tg-cell{padding:4px 6px}
+.tg-cell > .tg-date{display:inline-block; width:40px; margin:0 4px 0 0; text-align:right; vertical-align:middle; font-size:10.5px}
+.tg-ticks{vertical-align:middle; gap:4px}
+.tg-tick{width:26px; height:26px; font-size:11.5px}
+.tg-tick.on.waiting{font-size:16px}
+.tg-cell{white-space:nowrap}
+.tg-cell > .tg-date{width:auto; min-width:34px; white-space:nowrap; font-size:10px; letter-spacing:0}
+.tg-ticks{gap:3px}
+.tg-tick{width:25px; height:25px}
+
+/* =========================================================
+   Phones: the grid a week at a time, with big buttons
+   ========================================================= */
+.tw-strip{display:flex; gap:8px; overflow-x:auto; margin:0; padding:2px 0 8px; scroll-snap-type:x proximity}
+.tw-chip{flex:0 0 auto; scroll-snap-align:start; display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+  min-width:116px; padding:9px 13px; border-radius:14px; border:1.5px solid #e6dcea; background:#fff; cursor:pointer;
+  font:inherit; color:#3a1238; text-align:left}
+.tw-chip b{font-size:15px}
+.tw-chip small{font-size:11.5px; color:var(--muted)}
+.tw-chip i{font-style:normal; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:#d6336c}
+.tw-chip.now{border-color:#f6b3cb}
+.tw-chip.is-on{background:linear-gradient(135deg, #3a1238, #74204f); border-color:transparent; color:#fff; box-shadow:0 6px 16px rgba(58,18,56,.25)}
+.tw-chip.is-on small, .tw-chip.is-on i{color:rgba(255,255,255,.85)}
+
+.tw-day{border-radius:18px; background:#fff; border:1px solid #ece5f0; overflow:hidden; box-shadow:0 6px 18px rgba(58,18,56,.05)}
+.tw-day.today{border:2px solid #e8457c}
+.tw-day-head{display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; padding:10px 14px;
+  background:linear-gradient(90deg, #f3f6ff, #fff 80%); border-bottom:1px solid #eef0f7}
+.tw-day.we .tw-day-head{background:linear-gradient(90deg, #fff4e3, #fff 80%)}
+.tw-day-head > b{font-family:var(--f-display); font-size:18px; color:#3a1238; letter-spacing:.5px}
+.tw-day-head > b span{font-family:var(--f-body, inherit); font-size:13px; font-weight:600; color:var(--muted); letter-spacing:0; margin-left:4px}
+.tw-day-head small{margin-left:auto; font-size:11.5px; font-weight:700; color:var(--muted)}
+.tw-hol{margin:0; padding:8px 14px; font-size:13px; font-weight:600; background:#fff6dc; color:#7a5a12}
+.tw-hol.off{background:#eceaee; color:#5b4660}
+.tw-day.off .tw-class{opacity:.5}
+
+.tw-class{--c:#8e2b52; display:flex; flex-direction:column; gap:8px; padding:12px 14px; border-left:5px solid var(--c); border-top:1px solid #f4f0f6}
+.tw-day-head + .tw-class, .tw-hol + .tw-class{border-top:0}
+.tw-info b{display:block; font-size:16px; color:color-mix(in srgb, var(--c) 72%, #1d1b1e)}
+.tw-info b i{font-style:italic; font-weight:500; font-size:13px; color:var(--muted); margin-left:6px}
+.tw-info small{font-size:13px; color:var(--muted)}
+.tw-ticks{display:grid; grid-template-columns:repeat(auto-fill, minmax(72px, 1fr)); gap:8px}
+.tw-tick{--t:#8e2b52; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 4px 7px; border-radius:14px; cursor:pointer;
+  border:1.5px solid color-mix(in srgb, var(--t) 30%, #fff); background:#fff; font:inherit; color:#5b4660; min-height:62px}
+.tw-tick span{width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:15px;
+  background:color-mix(in srgb, var(--t) 12%, #fff); color:var(--t)}
+.tw-tick small{font-size:12px; font-weight:700; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.tw-tick.on{background:var(--t); border-color:var(--t); color:#fff; box-shadow:0 6px 14px color-mix(in srgb, var(--t) 30%, transparent)}
+.tw-tick.on span{background:rgba(255,255,255,.25); color:#fff}
+.tw-tick.on.waiting{background:#fff7e8; border:1.5px dashed #f0a020; color:#8a5300; box-shadow:none}
+.tw-tick.on.waiting span{background:#ffe6b8; color:#8a5300}
+.tw-tick:active{transform:scale(.96)}
+.tw-tick:disabled{opacity:.4}
+
+.tw-totals{padding:12px 14px; border-radius:16px; background:linear-gradient(135deg, #3a1238, #74204f); color:#fff}
+.tw-totals > b{display:block; font-size:13px; margin-bottom:8px; opacity:.9}
+.tw-totals div{display:flex; flex-wrap:wrap; gap:6px}
+.tw-totals span{display:inline-flex; align-items:center; gap:6px; padding:4px 10px 4px 4px; border-radius:999px; background:rgba(255,255,255,.14); font-size:13px}
+.tw-totals span i{font-style:normal; width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:var(--t); font-weight:800; font-size:12px}
+.tw-totals span b{font-size:15px}
+
+@media (max-width:720px){
+  .tc-legend{gap:6px 12px; font-size:12px}
+  .tc-layout{width:100%}
+  .tc-layout button{flex:1; min-height:40px}
+}

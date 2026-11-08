@@ -1,0 +1,471 @@
+<section class="panel tc">
+
+  <!-- ============ period + tabs ============ -->
+  <div class="tc-bar">
+    <div class="tc-period">
+      <button type="button" class="btn-round" title="Previous pay period" (click)="shift(-1)">‹</button>
+      <div class="tc-period-label">
+        <strong>{{ sheet()?.label || 'Salary' }}</strong>
+        @if (sheet(); as s) { <small>Attendance {{ date(s.from) }} – {{ date(s.to) }}</small> }
+      </div>
+      <button type="button" class="btn-round" title="Next pay period" (click)="shift(1)">›</button>
+    </div>
+    <div class="tc-tabs" role="tablist">
+      <button type="button" role="tab" [class.is-on]="tab() === 'attendance'" (click)="setTab('attendance')">✅ Attendance</button>
+      <button type="button" role="tab" [class.is-on]="tab() === 'salary'" (click)="setTab('salary')">💵 Salary</button>
+      <button type="button" role="tab" [class.is-on]="tab() === 'setup'" (click)="setTab('setup')">⚙️ Setup</button>
+    </div>
+  </div>
+
+  <!-- ============ teacher cards ============ -->
+  @if (tab() !== 'setup' && salary(); as sal) {
+    <div class="tc-people">
+      @for (l of sal.lines; track l.teacherId) {
+        <div class="tc-person" [style.--t]="l.colour">
+          <span class="tc-avatar">{{ initial(l.name) }}</span>
+          <div class="tc-person-text">
+            <b>{{ l.name }}</b>
+            <small>{{ l.weekday }} weekday · {{ l.weekend }} weekend</small>
+          </div>
+          <div class="tc-person-pay">
+            <b>Rs. {{ money(l.total) }}</b>
+            <small>{{ l.paidAt ? '✓ paid' : 'to pay ' + date(sal.payDate) }}</small>
+          </div>
+        </div>
+      }
+      <div class="tc-person total">
+        <span class="tc-avatar">Σ</span>
+        <div class="tc-person-text"><b>All teachers</b><small>{{ sal.weekday + sal.weekend }} classes</small></div>
+        <div class="tc-person-pay"><b>Rs. {{ money(sal.total) }}</b><small>salary {{ date(sal.payDate) }}</small></div>
+      </div>
+    </div>
+  }
+
+  <!-- =========================================================
+       ATTENDANCE
+       ========================================================= -->
+  @if (tab() === 'attendance') {
+    <div class="tc-legend">
+      <div class="tc-layout" role="tablist" aria-label="Layout">
+        <button type="button" role="tab" [class.is-on]="layout() === 'grid'" (click)="layout.set('grid')">▦ Grid</button>
+        <button type="button" role="tab" [class.is-on]="layout() === 'list'" (click)="layout.set('list')">☰ List</button>
+      </div>
+      <span><i class="lg-self">🎉</i> checked in and done</span>
+      <span><i class="lg-wait">📍</i> checked in, not done</span>
+      <span><i class="lg-office">✓</i> ticked by the office</span>
+      <span class="tc-legend-rates">Weekday Rs. {{ money(salary()?.rates?.weekday) }} · Weekend Rs. {{ money(salary()?.rates?.weekend) }} a class</span>
+      @if (layout() === 'list' && todayStats(); as t) {
+        <button type="button" class="btn btn-sm" (click)="scrollToToday()">Today · {{ t.self }} checked in</button>
+      }
+    </div>
+
+    <!-- ============ phones: one week at a time ============ -->
+    @if (layout() === 'grid' && phone() && week(); as wk) {
+      <div class="tw-strip" role="tablist" aria-label="Week">
+        @for (w of grid()!.weeks; track w.index) {
+          <button type="button" role="tab" class="tw-chip" [class.is-on]="w.index === wk.index" [class.now]="w.now"
+                  (click)="mWeek.set(w.index)">
+            <b>{{ w.label }}</b><small>{{ w.range }}</small>
+            @if (w.now) { <i>This week</i> }
+          </button>
+        }
+      </div>
+
+      @for (d of wk.days; track d.date) {
+        <section class="tw-day" [class.today]="d.today" [class.we]="d.weekend" [class.off]="d.holiday?.classOff">
+          <header class="tw-day-head">
+            <b>{{ d.dayName }} <span>{{ dayNum(d.date) }}</span></b>
+            @if (d.today) { <em class="tc-today">Today</em> }
+            <small>{{ d.weekend ? 'Weekend' : 'Weekday' }} rate</small>
+          </header>
+          @if (d.holiday; as h) {
+            <p class="tw-hol" [class.off]="h.classOff">{{ h.classOff ? '🚫' : '🌕' }} {{ h.name }}{{ h.classOff ? ' — no class' : '' }}</p>
+          }
+          @for (c of d.classes; track c.slot.id) {
+            <div class="tw-class" [style.--c]="colour(c.slot.category)">
+              <div class="tw-info">
+                <b>{{ c.slot.label }}@if (sessionName(c.slot); as sn) { <i>{{ sn }}</i> }</b>
+                <small>{{ c.time || 'removed from the timetable' }}</small>
+              </div>
+              <div class="tw-ticks">
+                @for (t of classTeachers(); track t.id) {
+                  @let w = marked(c, t.id);
+                  <button type="button" class="tw-tick" [style.--t]="t.colour" [class.on]="!!w"
+                          [class.self]="w?.method === 'self'" [class.waiting]="pendingDone(d, c, w)"
+                          [disabled]="(d.holiday?.classOff && !w) || saving() === d.date + c.slot.id + t.id"
+                          [attr.aria-label]="t.name + (w ? ' took ' : ' did not take ') + c.slot.label"
+                          (click)="toggle(d, c, t)">
+                    <span>{{ w && w.method === 'self' ? (w.finished ? '✓' : '·') : initial(t.name) }}</span>
+                    <small>{{ t.name }}</small>
+                  </button>
+                }
+              </div>
+              @for (n of notesOf(c); track n.name) {
+                <p class="tc-note" [style.--t]="n.colour"><b>{{ n.name }}:</b> {{ n.note }}</p>
+              }
+            </div>
+          }
+        </section>
+      } @empty {
+        <p class="empty">No classes this week.</p>
+      }
+
+      <div class="tw-totals">
+        <b>{{ wk.info.label }} · classes taken</b>
+        <div>
+          @for (x of wk.totals; track x.t.id) {
+            <span [style.--t]="x.t.colour"><i>{{ initial(x.t.name) }}</i>{{ x.t.name }} <b>{{ x.n }}</b></span>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ============ the whole period on one page ============ -->
+    @if (layout() === 'grid' && !phone() && grid(); as g) {
+      <div class="tg-wrap">
+        <table class="tg">
+          <thead>
+            <tr>
+              <th class="tg-class">Class</th>
+              @for (w of g.weeks; track w.index) {
+                <th class="tg-week" [class.now]="w.now"><b>{{ w.label }}</b><small>{{ w.range }}</small></th>
+              }
+              <th class="tg-sum">Taken</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of g.rows; track $index) {
+              @if (row.kind === 'day') {
+                <tr class="tg-dayrow" [class.we]="row.day === 'Saturday' || row.day === 'Sunday'">
+                  <td [attr.colspan]="g.weeks.length + 2">
+                    {{ row.day }}
+                    <em>{{ row.day === 'Saturday' || row.day === 'Sunday' ? 'weekend rate' : 'weekday rate' }}</em>
+                  </td>
+                </tr>
+              } @else {
+                <tr class="tg-row" [style.--c]="colour(row.slot.category)">
+                  <th class="tg-class">
+                    <b>{{ row.slot.label }}@if (sessionName(row.slot); as sn) { <i>{{ sn }}</i> }</b>
+                    <small>{{ row.time ? row.time.split(' – ')[0] : 'removed' }}</small>
+                  </th>
+                  @for (cell of row.cells; track $index) {
+                    @if (cell) {
+                      <td class="tg-cell" [class.today]="cell.day.today" [class.future]="cell.day.future" [class.off]="cell.day.holiday?.classOff"
+                          [title]="cell.day.holiday ? cell.day.holiday.name : ''">
+                        <span class="tg-date">{{ dayNum(cell.day.date) }}@if (cell.day.holiday?.classOff) { · holiday }</span>
+                        <span class="tg-ticks">
+                          @for (t of classTeachers(); track t.id) {
+                            @let w = marked(cell.cls, t.id);
+                            <button type="button" class="tg-tick" [style.--t]="t.colour" [class.on]="!!w"
+                                    [class.self]="w?.method === 'self'" [class.waiting]="pendingDone(cell.day, cell.cls, w)"
+                                    [disabled]="(cell.day.holiday?.classOff && !w) || saving() === cell.day.date + cell.cls.slot.id + t.id"
+                                    [title]="t.name + ' — ' + whoTitle(cell.cls, t)" (click)="toggle(cell.day, cell.cls, t)">
+                              {{ w && w.method === 'self' ? (w.finished ? '✓' : '·') : initial(t.name) }}
+                            </button>
+                          }
+                        </span>
+                      </td>
+                    } @else {
+                      <td class="tg-cell none"></td>
+                    }
+                  }
+                  <td class="tg-sum">
+                    @for (t of classTeachers(); track t.id) {
+                      @if (rowCount(row.cells, t.id); as n) { <span [style.--t]="t.colour">{{ initial(t.name) }}{{ n }}</span> }
+                    }
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="tg-key">Tap a teacher's letter to tick or untick them for that class. A filled letter = took the class;
+        a white ✓ inside = they checked in themselves and marked it done; a dashed outline = checked in but not marked done (tap to confirm).</p>
+    }
+
+    @if (layout() === 'list' && hiddenDays() > 0) {
+      <button type="button" class="tc-more" (click)="showPast.set(true)">Show {{ hiddenDays() }} earlier days in this period</button>
+    }
+
+    <div class="tc-days" [hidden]="layout() !== 'list'">
+      @for (d of days(); track d.date) {
+        <article class="tc-day" [class.is-today]="d.today" [class.is-weekend]="d.weekend" [class.is-off]="d.holiday?.classOff" [class.is-future]="d.future">
+          <header class="tc-day-head">
+            <div class="tc-date"><b>{{ d.label.split(' ')[0] }}</b><small>{{ d.label.split(' ')[1] }}</small></div>
+            <div class="tc-day-name">
+              <b>{{ d.dayName }} @if (d.today) { <em class="tc-today">Today</em> }</b>
+              <small>
+                <span class="tc-kind" [class.we]="d.weekend">{{ d.weekend ? 'Weekend' : 'Weekday' }}</span>
+                {{ d.classes.length }} classes · {{ dayTicks(d) }} ticks
+              </small>
+            </div>
+            @if (d.holiday; as h) {
+              <span class="tc-hol" [class.off]="h.classOff">{{ h.classOff ? '🚫' : '🌕' }} {{ h.name }}{{ h.classOff ? ' — no class' : '' }}</span>
+            }
+          </header>
+          <div class="tc-classes">
+            @for (c of d.classes; track c.slot.id) {
+              <div class="tc-class" [style.--c]="colour(c.slot.category)" [class.removed]="c.removed">
+                <div class="tc-class-info">
+                  <b>{{ c.slot.label }}@if (sessionName(c.slot); as sn) { <i>· {{ sn }}</i> }</b>
+                  <small>{{ c.time || 'removed from the timetable' }}</small>
+                </div>
+                <div class="tc-who">
+                  @for (t of classTeachers(); track t.id) {
+                    @let w = marked(c, t.id);
+                    <button type="button" class="tc-tick" [style.--t]="t.colour" [class.on]="!!w" [class.self]="w?.method === 'self'"
+                            [class.waiting]="pendingDone(d, c, w)"
+                            [disabled]="(d.holiday?.classOff && !w) || saving() === d.date + c.slot.id + t.id"
+                            [title]="whoTitle(c, t)" (click)="toggle(d, c, t)">
+                      <i>{{ w ? (w.method !== 'self' ? '✓' : w.finished ? '🎉' : '📍') : initial(t.name) }}</i>{{ t.name }}
+                      @if (w?.method === 'self') {
+                        <small>{{ time(w!.at) }}{{ w!.doneAt ? ' – ' + time(w!.doneAt) : (d.future ? '' : ' · not done') }}</small>
+                      }
+                    </button>
+                  }
+                </div>
+                @for (n of notesOf(c); track n.name) {
+                  <p class="tc-note" [style.--t]="n.colour"><b>{{ n.name }}:</b> {{ n.note }}</p>
+                }
+              </div>
+            }
+          </div>
+        </article>
+      } @empty {
+        <p class="empty">{{ loading() ? 'Loading…' : 'No classes in this period.' }}</p>
+      }
+    </div>
+  }
+
+  <!-- =========================================================
+       SALARY
+       ========================================================= -->
+  @if (tab() === 'salary' && salary(); as sal) {
+    <div class="card tc-salary">
+      <div class="card-head">
+        <h2 data-ico="💵" data-tone="green">Salary {{ date(sal.payDate) }}</h2>
+        <button type="button" class="btn btn-sm" (click)="exportSalary()">Export for Excel</button>
+      </div>
+      <p class="hint tc-rule">Weekday class <b>Rs. {{ money(sal.rates.weekday) }}</b> · weekend class <b>Rs. {{ money(sal.rates.weekend) }}</b> ·
+        transport <b>Rs. {{ money(sal.rates.transport) }}</b> once a teacher takes {{ sal.rates.transportMinClasses }}+ class in the period.
+        Classes on a "no class" holiday are not counted.</p>
+      <div class="tc-sal-list">
+        @for (l of sal.lines; track l.teacherId) {
+          <div class="tc-sal" [style.--t]="l.colour" [class.paid]="!!l.paidAt">
+            <div class="tc-sal-who"><span class="tc-avatar">{{ initial(l.name) }}</span><b>{{ l.name }}</b></div>
+            <div class="tc-sal-cell"><small>Weekday</small><b>{{ l.weekday }} × {{ money(sal.rates.weekday) }}</b><em>Rs. {{ money(l.weekdayPay) }}</em></div>
+            <div class="tc-sal-cell"><small>Weekend</small><b>{{ l.weekend }} × {{ money(sal.rates.weekend) }}</b><em>Rs. {{ money(l.weekendPay) }}</em></div>
+            <div class="tc-sal-cell"><small>Transport</small><b>Rs. {{ money(l.transport) }}</b><em>{{ l.transport ? 'included' : 'no classes' }}</em></div>
+            <div class="tc-sal-cell adj">
+              <small>Adjustment (+/−)</small>
+              <input #amt type="number" step="100" placeholder="0" [value]="l.adjustment || ''" [disabled]="!!l.paidAt"
+                     (change)="adjust(l, amt.value, note.value)">
+              <input #note type="text" placeholder="Reason (advance, bonus…)" [value]="l.adjustmentNote" [disabled]="!!l.paidAt"
+                     (change)="adjust(l, amt.value, note.value)">
+            </div>
+            <div class="tc-sal-total"><small>Total</small><b>Rs. {{ money(l.total) }}</b></div>
+            <div class="tc-sal-paid">
+              @if (l.paidAt) {
+                <button type="button" class="tc-paid-btn on" (click)="setPaid(l, false)" title="Undo">✓ Paid {{ date(l.paidAt) }}</button>
+              } @else {
+                <button type="button" class="tc-paid-btn" (click)="setPaid(l, true)">Mark paid</button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+      <div class="tc-sal-sum">
+        <span>{{ sal.weekday }} weekday + {{ sal.weekend }} weekend classes</span>
+        <span>Classes Rs. {{ money(sal.classPay) }} · Transport Rs. {{ money(sal.transport) }}{{ sal.adjustment ? ' · Adjustments Rs. ' + money(sal.adjustment) : '' }}</span>
+        <b>Total Rs. {{ money(sal.total) }}</b>
+      </div>
+    </div>
+  }
+
+  <!-- =========================================================
+       SETUP
+       ========================================================= -->
+  @if (tab() === 'setup') {
+    @if (setup(); as s) {
+      <div class="tc-setup">
+
+        <!-- teachers -->
+        <div class="card">
+          <div class="card-head">
+            <h2 data-ico="👩‍🏫" data-tone="rose">Teachers</h2>
+            <button type="button" class="btn btn-primary btn-sm" (click)="newTeacher()">+ Add teacher</button>
+          </div>
+          <p class="hint">Each teacher signs in on their phone with their name and a PIN, then checks in when they arrive.
+            Sign-in link: <a [href]="signInLink()" target="_blank">{{ signInLink() }}</a>
+            <button type="button" class="btn-icon" (click)="copy(signInLink())">Copy</button></p>
+          <div class="tc-tlist">
+            @for (t of s.teachers; track t.id) {
+              <div class="tc-trow" [style.--t]="t.colour" [class.off]="!t.active">
+                <span class="tc-avatar">{{ initial(t.name) }}</span>
+                <div class="tc-trow-text">
+                  <b>{{ t.name }} @if (!t.active) { <em>inactive</em> }</b>
+                  <small>{{ t.phone || 'no phone' }} · <span [class.warn-text]="!t.hasPin">{{ t.hasPin ? '🔑 PIN set' : 'No PIN yet — cannot check in' }}</span></small>
+                </div>
+                <div class="tc-trow-act">
+                  <button type="button" class="btn btn-sm" [class.btn-primary]="!t.hasPin" (click)="newPin(t)">{{ t.hasPin ? 'New PIN' : 'Give PIN' }}</button>
+                  <button type="button" class="btn btn-sm" (click)="editTeacher(t)">Edit</button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- rates -->
+        <div class="card">
+          <div class="card-head"><h2 data-ico="💰" data-tone="green">Pay rates</h2></div>
+          <div class="grid-2">
+            <label class="field"><span>Weekday class (Mon–Fri)</span>
+              <input type="number" min="0" step="50" [ngModel]="s.rates.weekday" (ngModelChange)="patchSetup({ rates: { ...s.rates, weekday: $event } })"></label>
+            <label class="field"><span>Weekend class (Sat, Sun)</span>
+              <input type="number" min="0" step="50" [ngModel]="s.rates.weekend" (ngModelChange)="patchSetup({ rates: { ...s.rates, weekend: $event } })"></label>
+            <label class="field"><span>Transport a month</span>
+              <input type="number" min="0" step="500" [ngModel]="s.rates.transport" (ngModelChange)="patchSetup({ rates: { ...s.rates, transport: $event } })"></label>
+            <label class="field"><span>Transport after how many classes</span>
+              <input type="number" min="1" step="1" [ngModel]="s.rates.transportMinClasses" (ngModelChange)="patchSetup({ rates: { ...s.rates, transportMinClasses: $event } })"></label>
+          </div>
+          <p class="hint">Changing a rate changes the salary of every pay period not yet marked paid.</p>
+          <footer class="tc-save"><button type="button" class="btn btn-primary" [disabled]="saving() === 'rates'" (click)="saveSetup('rates')">Save rates</button></footer>
+        </div>
+
+        <!-- location -->
+        <div class="card">
+          <div class="card-head"><h2 data-ico="📍" data-tone="blue">Academy location</h2></div>
+          <p class="hint">Teachers can only check in within this distance of the academy, and only from
+            {{ s.site.earlyMinutes }} minutes before a class until {{ s.site.lateMinutes }} minutes after it ends.
+            Easiest: stand inside the academy with your phone and tap <b>Use where I am now</b>.</p>
+          @if (s.site.lat == null) { <p class="hint warn">Not set yet — teachers cannot check in until it is.</p> }
+          <div class="grid-2">
+            <label class="field"><span>Latitude</span>
+              <input type="number" step="0.000001" placeholder="6.9271" [ngModel]="s.site.lat" (ngModelChange)="patchSite({ lat: $event })"></label>
+            <label class="field"><span>Longitude</span>
+              <input type="number" step="0.000001" placeholder="79.8612" [ngModel]="s.site.lng" (ngModelChange)="patchSite({ lng: $event })"></label>
+            <label class="field"><span>Allowed distance (metres)</span>
+              <input type="number" min="20" step="10" [ngModel]="s.site.radius" (ngModelChange)="patchSite({ radius: $event })"></label>
+            <label class="field"><span>Opens before a class (minutes)</span>
+              <input type="number" min="0" step="5" [ngModel]="s.site.earlyMinutes" (ngModelChange)="patchSite({ earlyMinutes: $event })"></label>
+            <label class="field"><span>Check-in stays open after it ends (minutes)</span>
+              <input type="number" min="0" step="5" [ngModel]="s.site.lateMinutes" (ngModelChange)="patchSite({ lateMinutes: $event })"></label>
+            <label class="field"><span>"Class done" open after it ends (minutes)</span>
+              <input type="number" min="0" step="5" [ngModel]="s.site.doneMinutes" (ngModelChange)="patchSite({ doneMinutes: $event })"></label>
+          </div>
+          <p class="hint">After each class the teacher taps <b>Class done</b> (from 10 minutes before it ends) to confirm they taught it,
+            with a note on what they covered. A class not marked done shows <b>📍 not done</b> on the Attendance tab — tap it to confirm it yourself.</p>
+          <footer class="tc-save">
+            <button type="button" class="btn" [disabled]="locating()" (click)="useHere()">{{ locating() ? 'Finding…' : '📍 Use where I am now' }}</button>
+            @if (s.site.lat != null) { <a class="btn btn-ghost" [href]="mapLink(s.site)" target="_blank">View on map</a> }
+            <span class="spacer"></span>
+            <button type="button" class="btn btn-primary" [disabled]="saving() === 'site'" (click)="saveSetup('site')">Save location</button>
+          </footer>
+        </div>
+
+        <!-- timetable -->
+        <div class="card tc-wide">
+          <div class="card-head">
+            <h2 data-ico="🗓️" data-tone="violet">Weekly timetable</h2>
+            <button type="button" class="btn btn-sm" (click)="addSlot()">+ Add class</button>
+          </div>
+          <p class="hint">The classes teachers check in to. Saturday and Sunday classes pay the weekend rate.</p>
+          @for (g of scheduleByDay(); track g.day) {
+            <h3 class="tc-dayh">{{ g.day }}</h3>
+            @for (r of g.slots; track r.i) {
+              <div class="tc-slot" [style.--c]="colour(r.x.category)">
+                <select [ngModel]="r.x.day" (ngModelChange)="patchSlot(r.i, { day: $event })" aria-label="Day">
+                  @for (d of DAYS; track d) { <option [value]="d">{{ d }}</option> }
+                </select>
+                <input type="time" [ngModel]="r.x.start" (ngModelChange)="patchSlot(r.i, { start: $event })" aria-label="Starts">
+                <select [ngModel]="r.x.minutes" (ngModelChange)="patchSlot(r.i, { minutes: +$event })" aria-label="Length">
+                  @for (m of [30, 45, 60, 75, 90, 120]; track m) { <option [value]="m">{{ m }} min</option> }
+                </select>
+                <input type="text" list="tcCats" placeholder="Class" [ngModel]="r.x.category" (ngModelChange)="patchSlot(r.i, { category: $event })" aria-label="Class">
+                <input type="text" placeholder="Name on the sheet" [ngModel]="r.x.label" (ngModelChange)="patchSlot(r.i, { label: $event })" aria-label="Name">
+                <button type="button" class="btn-icon danger" (click)="removeSlot(r.i)" title="Remove">✕</button>
+              </div>
+            }
+          }
+          <datalist id="tcCats">@for (c of categoryOptions(); track c) { <option [value]="c"></option> }</datalist>
+          <footer class="tc-save"><button type="button" class="btn btn-primary" [disabled]="saving() === 'schedule'" (click)="saveSetup('schedule')">Save timetable</button></footer>
+        </div>
+
+        <!-- holidays -->
+        <div class="card tc-wide">
+          <div class="card-head">
+            <h2 data-ico="🎉" data-tone="amber">Holidays</h2>
+            <button type="button" class="btn btn-sm" (click)="addHoliday()">+ Add holiday</button>
+          </div>
+          <p class="hint">Mercantile holidays usually mean <b>no class</b>. Poya days with classes as usual can stay listed, switched to "classes as usual".</p>
+          @for (h of s.holidays; track $index; let i = $index) {
+            <div class="tc-holrow" [class.past]="isPast(h.date)">
+              <input type="date" [ngModel]="h.date" (ngModelChange)="patchHoliday(i, { date: $event })" aria-label="Date">
+              <input type="text" placeholder="e.g. Christmas Day" [ngModel]="h.name" (ngModelChange)="patchHoliday(i, { name: $event })" aria-label="Name">
+              <label class="switch"><input type="checkbox" [ngModel]="h.classOff" (ngModelChange)="patchHoliday(i, { classOff: $event })"><span></span>
+                <em>{{ h.classOff ? 'No class' : 'Classes as usual' }}</em></label>
+              <button type="button" class="btn-icon danger" (click)="removeHoliday(i)" title="Remove">✕</button>
+            </div>
+          }
+          <footer class="tc-save"><button type="button" class="btn btn-primary" [disabled]="saving() === 'holidays'" (click)="saveSetup('holidays')">Save holidays</button></footer>
+        </div>
+      </div>
+    } @else {
+      <p class="empty">Loading…</p>
+    }
+  }
+</section>
+
+<!-- ============ teacher editor ============ -->
+@if (editing(); as e) {
+  <div class="sheet-backdrop" (click)="editing.set(null)"></div>
+  <aside class="sheet small" role="dialog" aria-modal="true" aria-label="Teacher">
+    <header class="sheet-head">
+      <div><h2>{{ e.id ? e.name || 'Teacher' : 'New teacher' }}</h2><small>Name, WhatsApp number and colour</small></div>
+      <button type="button" class="btn-icon" (click)="editing.set(null)" aria-label="Close">✕</button>
+    </header>
+    <form class="sheet-body" (submit)="$event.preventDefault(); saveTeacher()">
+      <label class="field"><span>Name</span>
+        <input type="text" name="name" [ngModel]="e.name" (ngModelChange)="patchEdit({ name: $event })" autocomplete="off"></label>
+      <label class="field"><span>Phone / WhatsApp</span>
+        <input type="tel" name="phone" placeholder="07X XXX XXXX" [ngModel]="e.phone" (ngModelChange)="patchEdit({ phone: $event })"></label>
+      <div class="field"><span>Colour</span>
+        <div class="tc-colours">
+          @for (c of COLOURS; track c) {
+            <button type="button" [style.background]="c" [class.on]="e.colour === c" (click)="patchEdit({ colour: c })" [attr.aria-label]="c"></button>
+          }
+        </div>
+      </div>
+      <label class="switch big"><input type="checkbox" name="active" [ngModel]="e.active" (ngModelChange)="patchEdit({ active: $event })"><span></span>
+        Active — can check in and is paid</label>
+      <footer class="sheet-foot">
+        @if (e.id) { <button type="button" class="btn btn-sm btn-ghost danger-text" (click)="removeTeacher($any({ id: e.id, name: e.name }))">Remove</button> }
+        <span class="spacer"></span>
+        <button type="button" class="btn" (click)="editing.set(null)">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving() === 'teacher'">Save</button>
+      </footer>
+    </form>
+  </aside>
+}
+
+<!-- ============ a new PIN ============ -->
+@if (pinShown(); as p) {
+  <div class="sheet-backdrop" (click)="pinShown.set(null)"></div>
+  <aside class="sheet small" role="dialog" aria-modal="true" aria-label="PIN">
+    <header class="sheet-head">
+      <div><h2>{{ p.teacher.name }}'s PIN</h2><small>Shown only now — send it to them</small></div>
+      <button type="button" class="btn-icon" (click)="pinShown.set(null)" aria-label="Close">✕</button>
+    </header>
+    <div class="sheet-body">
+      <div class="tc-pin">{{ p.pin }}</div>
+      <p class="hint">On their phone: open <b>{{ signInLink() }}</b>, tap <b>Teacher</b>, pick <b>{{ p.teacher.name }}</b> and type this PIN.
+        Add the page to the home screen for one-tap check-ins.</p>
+      <footer class="sheet-foot">
+        <button type="button" class="btn" (click)="copy(p.pin)">Copy PIN</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-wa" (click)="copyPin(p)">📋 Copy message for WhatsApp</button>
+      </footer>
+    </div>
+  </aside>
+}

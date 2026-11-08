@@ -1,0 +1,164 @@
+<section class="ci">
+
+  <!-- ============ hello ============ -->
+  <header class="ci-hello">
+    <div>
+      <p class="ci-greet">{{ greeting() }},</p>
+      <h1>{{ name() }} <span aria-hidden="true">👋</span></h1>
+      <p class="ci-date">{{ me()?.dateLabel }}</p>
+    </div>
+    @if (me(); as m) {
+      <div class="ci-ring" [title]="done() + ' of ' + m.today.length + ' classes done today'">
+        <b>{{ done() }}<small>/{{ m.today.length }}</small></b>
+        <span>done today</span>
+      </div>
+    }
+  </header>
+
+  @if (loadError()) { <p class="ci-msg bad">{{ loadError() }} <button type="button" class="ci-link" (click)="load()">Try again</button></p> }
+
+  <!-- ============ where am I ============ -->
+  @switch (where().kind) {
+    @case ('looking') {
+      <div class="ci-where looking"><span class="ci-pulse"></span><div><b>Finding where you are…</b><small>Allow location if your phone asks.</small></div></div>
+    }
+    @case ('here') {
+      <div class="ci-where here"><span class="ci-pin">📍</span><div><b>You're at the academy</b>
+        <small>About {{ km($any(where()).metres) }} away · GPS ±{{ km($any(where()).accuracy) }}</small></div>
+        <button type="button" class="ci-link" (click)="locate()">Refresh</button></div>
+    }
+    @case ('away') {
+      <div class="ci-where away"><span class="ci-pin">🧭</span><div><b>You're {{ km($any(where()).metres) }} from the academy</b>
+        <small>Check in once you arrive (within {{ me()?.radius }} m).</small></div>
+        <button type="button" class="ci-link" (click)="locate()">Find me again</button></div>
+    }
+    @case ('unknown') {
+      <div class="ci-where away"><span class="ci-pin">🏫</span><div><b>The academy's location isn't set yet</b>
+        <small>Please ask the office to set it before checking in.</small></div></div>
+    }
+    @case ('blocked') {
+      <div class="ci-where bad"><span class="ci-pin">🔒</span><div><b>Location is blocked</b>
+        <small>Tap the lock / ⓘ next to the address, allow Location, then tap "Find me again".</small></div>
+        <button type="button" class="ci-link" (click)="locate()">Find me again</button></div>
+    }
+    @case ('insecure') {
+      <div class="ci-where bad"><span class="ci-pin">🔒</span><div><b>Location needs a secure link</b>
+        <small>Open the app with its https:// address to check in.</small></div></div>
+    }
+    @case ('failed') {
+      <div class="ci-where bad"><span class="ci-pin">📡</span><div><b>{{ $any(where()).message }}</b>
+        <small>Turn on location (GPS), step near a window, and try again.</small></div>
+        <button type="button" class="ci-link" (click)="locate()">Try again</button></div>
+    }
+  }
+
+  @if (message(); as msg) {
+    <p class="ci-msg" [class.ok]="msg.ok" [class.bad]="!msg.ok" role="status">{{ msg.text }}</p>
+  }
+
+  <!-- ============ today ============ -->
+  @if (me(); as m) {
+    @if (m.holiday) {
+      <div class="ci-holiday" [class.off]="m.holiday.classOff">
+        <span>🎉</span><div><b>{{ m.holiday.name }}</b>
+        <small>{{ m.holiday.classOff ? 'No classes today — enjoy the day!' : 'A holiday, but classes run as usual.' }}</small></div>
+      </div>
+    }
+
+    <h2 class="ci-h2">Today's classes</h2>
+    @if (m.today.length) { <a class="ci-roll" routerLink="/roll">✋ Take the student register <span>→</span></a> }
+    @if (nothingOpen(); as why) { <p class="ci-msg info">🕒 {{ why }}</p> }
+    @if (toFinish().length) { <p class="ci-msg finish">🎵 Class over? Tap <b>Class done</b> to confirm you taught it.</p> }
+    @for (c of m.today; track c.slot.id) {
+      <article class="ci-class" [class]="'ci-class st-' + c.state" [style.--c]="colour(c.slot.category)">
+        <div class="ci-time">
+          <b>{{ c.time.split(' – ')[0] }}</b>
+          <small>{{ c.time.split(' – ')[1] }}</small>
+        </div>
+        <div class="ci-what">
+          <b>{{ c.slot.label }}</b>
+          <small>{{ c.slot.category }}{{ c.others.length ? ' · with ' + c.others.join(', ') : '' }}</small>
+        </div>
+        <div class="ci-act">
+          @switch (c.state) {
+            @case ('OPEN') {
+              <button type="button" class="ci-btn" [disabled]="!!busy()" (click)="checkIn(c)">
+                {{ busy() === c.slot.id ? 'Checking…' : 'Check in' }}</button>
+            }
+            @case ('IN_CLASS') {
+              <span class="ci-done in">✓ In class<small>since {{ time(c.checkedAt) }} · done from {{ c.doneOpensAt }}</small></span>
+            }
+            @case ('FINISH') {
+              <span class="ci-done in">✓ Checked in<small>{{ time(c.checkedAt) }}</small></span>
+            }
+            @case ('COMPLETE') {
+              <span class="ci-done">✓✓ Done<small>{{ c.doneAt ? time(c.doneAt) : 'by the office' }}</small></span>
+            }
+            @case ('UNFINISHED') { <span class="ci-missed">Not marked done<small>Ask the office</small></span> }
+            @case ('LATER') { <span class="ci-later">Opens<b>{{ c.opensAt }}</b></span> }
+            @case ('MISSED') { <span class="ci-missed">Closed {{ c.closesAt }}<small>Ask the office</small></span> }
+            @case ('HOLIDAY') { <span class="ci-later">No class</span> }
+          }
+        </div>
+        @if (c.state === 'FINISH') {
+          <!-- after the class: what was covered, and the confirmation -->
+          <div class="ci-finish">
+            <label>
+              <span>What did you cover? <em>(optional)</em></span>
+              <textarea rows="2" maxlength="300" placeholder="e.g. Scales in C, 'Twinkle Twinkle' with actions"
+                        [value]="notes()[c.slot.id] ?? ''" (input)="setNote(c.slot.id, $any($event.target).value)"></textarea>
+            </label>
+            <button type="button" class="ci-btn ci-btn-done" [disabled]="!!busy()" (click)="finish(c)">
+              {{ busy() === c.slot.id ? 'Saving…' : '🎉 Class done' }}</button>
+            <small class="ci-finish-by">Open until {{ c.doneClosesAt }}</small>
+          </div>
+        }
+        @if (c.state === 'COMPLETE' && c.note) {
+          <p class="ci-note">“{{ c.note }}”</p>
+        }
+      </article>
+    } @empty {
+      <div class="ci-free">
+        <span>🌿</span>
+        <b>No classes today</b>
+        @if (m.next.length) { <small>Your next teaching day is {{ m.next[0].label }}.</small> }
+      </div>
+    }
+
+    <!-- ============ coming up ============ -->
+    @if (m.next.length) {
+      <h2 class="ci-h2">Coming up</h2>
+      <div class="ci-next">
+        @for (d of m.next; track d.date) {
+          <div class="ci-next-day"><b>{{ d.label }}</b>
+            @for (x of d.classes; track $index) { <small>{{ x }}</small> }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ============ this pay period ============ -->
+    @if (m.pay; as p) {
+      <h2 class="ci-h2">This pay period</h2>
+      <div class="ci-pay">
+        <p class="ci-pay-period">{{ m.periodLabel }}</p>
+        <div class="ci-pay-grid">
+          <div><b>{{ p.weekday }}</b><small>weekday classes</small></div>
+          <div><b>{{ p.weekend }}</b><small>weekend classes</small></div>
+          <div><b>{{ classes() }}</b><small>in all</small></div>
+        </div>
+        <dl>
+          <dt>Classes</dt><dd>Rs. {{ money(p.classPay) }}</dd>
+          <dt>Transport</dt><dd>{{ p.transport ? 'Rs. ' + money(p.transport) : 'after your first class' }}</dd>
+          @if (p.adjustment) { <dt>Adjustment{{ p.adjustmentNote ? ' · ' + p.adjustmentNote : '' }}</dt><dd>Rs. {{ money(p.adjustment) }}</dd> }
+          <dt class="tot">So far</dt><dd class="tot">Rs. {{ money(p.total) }}</dd>
+        </dl>
+        @if (p.paidAt) { <p class="ci-paid">✓ Paid on {{ day(p.paidAt) }}</p> }
+      </div>
+    }
+  } @else if (!loadError()) {
+    <p class="ci-loading">Loading your classes…</p>
+  }
+
+  <button type="button" class="ci-signout" (click)="auth.logout()">Sign out</button>
+</section>

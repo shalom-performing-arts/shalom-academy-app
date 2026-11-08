@@ -1,0 +1,194 @@
+/* =========================================================
+   Phones and small tablets
+   Everything here is for narrow screens; the desktop layout is untouched.
+   ========================================================= */
+
+@media (max-width:720px){
+
+
+  /* ---------- typing and tapping ---------- */
+  /* below 16px iPhones zoom the whole page in when a box is tapped */
+  input[type=text],input[type=password],input[type=date],input[type=number],input[type=search],
+  input[type=month],input[type=tel],select,textarea{font-size:16px !important}
+  input[type=text],input[type=password],input[type=date],input[type=number],input[type=search],
+  input[type=month],input[type=tel],select{min-height:44px}
+  .btn{min-height:44px}
+  .btn-sm{min-height:40px; padding:8px 13px}
+  .btn-icon{min-height:40px; min-width:40px; padding:8px 10px}
+  .link{padding:8px 0}
+  .switch{min-height:44px}
+  .cl-months button{min-height:40px}
+  .switch span{width:44px; height:26px}
+  .switch span::after{width:20px; height:20px}
+  .switch input:checked + span::after{transform:translateX(18px)}
+
+  .card{padding:14px; border-radius:14px}
+  .card-head{flex-wrap:wrap}
+  .card-head .row-gap{flex-wrap:wrap; width:100%}
+  .search{min-width:0; width:100%}
+  .hint{font-size:13px}
+
+  /* ---------- page headers and class tabs ---------- */
+  .pm{gap:12px}
+  .pm-head{align-items:stretch; flex-direction:column; gap:10px}
+  .pm-title{font-size:22px}
+  .pm-head .row-gap{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .pm-head .row-gap .btn-primary{grid-column:1 / -1; justify-content:center}
+  .pm-head .row-gap .btn{justify-content:center}
+  .pm-sub{display:none}
+  .pm-month{display:grid; grid-template-columns:44px 1fr 44px; gap:8px; align-items:center}
+  .pm-month > .btn{grid-column:1 / -1; justify-content:center}
+  .pm-month-label{min-width:0}
+  .pm-month-label strong{font-size:18px; white-space:nowrap}
+  .btn-round{width:44px; height:44px}
+
+  /* class tabs scroll sideways instead of wrapping onto several lines */
+  /* no negative margins here: anything wider than the screen makes the phone widen the whole
+     page, which then stretches this again — the tab bar ended up 568px wide on a 390px phone */
+  .seg{flex-wrap:nowrap; overflow-x:auto; min-width:0; max-width:100%; padding:2px 0 6px;
+       scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; scrollbar-width:none}
+  .seg::-webkit-scrollbar{display:none}
+  .seg button{flex:0 0 auto; min-width:104px; scroll-snap-align:start}
+  .pm-toolbar{flex-direction:column; align-items:stretch; gap:10px}
+  .pm-filters{flex-direction:column; align-items:stretch}
+  .chips{align-self:stretch}
+  .chips button{flex:1; min-height:38px}
+
+  /* ---------- Payments ---------- */
+  .pm-tiles{grid-template-columns:1fr 1fr; gap:10px}
+  .pm-tile{padding:12px 13px}
+  .pm-tile:first-child{grid-column:1 / -1}
+  .pm-tile-amt{font-size:21px}
+  .pm-tile-name{font-size:11px}
+  .pm-summary{gap:14px}
+  .pm-progress{flex-basis:100%}
+  .pm-counts{width:100%; display:grid; grid-template-columns:repeat(auto-fit, minmax(70px, 1fr))}
+  .pm-count{min-width:0; padding:7px 4px}
+
+  .pm-ghead{padding:10px 12px; gap:6px}
+  .pm-gname{gap:4px 8px}
+  .pm-gname b{font-size:16px}
+  .pm-gstats{width:100%; justify-content:space-between; flex-wrap:wrap; gap:6px 10px}
+
+  /* a row is just tick · who · status; the rest is in the details, a tap away */
+  .pm-row{grid-template-columns:44px minmax(0,1fr) auto; gap:4px 10px; padding:10px 12px}
+  .pm-row .tick{width:38px; height:38px; grid-row:1 / 3; align-self:center}
+  .pm-row .pm-who{grid-column:2; grid-row:1}
+  .pm-row .status{grid-column:3; grid-row:1; align-self:center}
+  .pm-row .pm-fee{grid-column:2 / 4; grid-row:2; text-align:left; font-size:13px; color:var(--muted);
+                  display:flex; gap:8px; align-items:baseline; flex-wrap:wrap}
+  .pm-row .pm-fee small{display:inline}
+  .pm-row .pm-to,.pm-row .pm-to-none,.pm-row .pm-remark,.pm-row .pm-receipt{display:none}
+  .pm-who b{white-space:normal}
+
+  .pm-detail{grid-template-columns:minmax(0,1fr); padding:12px 12px 16px; gap:14px}
+  .pm-detail-col{min-width:0}
+  .pm-detail-col.side{border-left:0; padding-left:0; border-top:1px dashed #e5d6de; padding-top:12px}
+  .pm-add{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .pm-add .field{flex:none}
+  .pm-add .btn{grid-column:1 / -1; justify-content:center}
+  .pm-mobile-only{display:block !important}
+
+  /* payments list inside the details: one block per payment */
+  table.list.compact, table.list.compact tbody{display:block}
+  table.list.compact tr{display:grid; grid-template-columns:1fr auto; gap:2px 10px; padding:8px 10px;
+                        border-bottom:1px solid #f1eef3}
+  table.list.compact td{display:block; padding:0; border:0}
+  table.list.compact td:empty{display:none}
+  table.list.compact .num{text-align:right}
+  table.list.compact .actions{text-align:right}
+
+  /* ---------- Students ---------- */
+  .st-fees{grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px}
+  .st-fee{padding:10px 12px}
+  .st-fee-amt{font-size:18px}
+  .st-row{grid-template-columns:minmax(0,1fr) auto auto; gap:2px 10px; padding:10px 12px}
+  .st-row .st-no{display:none}
+  .st-row .pm-who{grid-column:1; grid-row:1}
+  .st-row .st-fee-cell{grid-column:2; grid-row:1; align-self:center}
+  .st-row .switch{grid-column:3; grid-row:1; font-size:0; gap:0}
+  .st-row .st-contact{grid-column:1 / -1; grid-row:2}
+  .st-row > .btn-icon{display:none}       /* tapping the name opens the editor */
+  .pm-group .pm-gstats .btn-icon{background:#fff; border:1px solid #ecdde5}
+  .bar.bar-sm{display:none}
+
+  /* ---------- side sheets become full-screen pages ---------- */
+  .sheet,.sheet.small,.sheet.wide{width:100vw; border-radius:0}
+  .sheet-head{padding:12px 14px; padding-top:calc(12px + env(safe-area-inset-top))}
+  .sheet-body{padding:14px 14px 0}
+  /* flush with the bottom edge, or the form shows through underneath the buttons */
+  .sheet-foot{position:sticky; bottom:0; z-index:2; background:#fff; margin:16px -14px 0; padding:12px 14px;
+              padding-bottom:calc(12px + env(safe-area-inset-bottom)); box-shadow:0 -6px 16px rgba(0,0,0,.06)}
+  .sheet-foot .btn{flex:1; justify-content:center}
+  .sheet-foot .spacer{display:none}
+
+  /* ---------- New receipt ---------- */
+  .layout{gap:14px}
+  .fee-row{flex-wrap:wrap; gap:8px}
+  .fee-label{flex-basis:100%}
+  .fee-amt{flex:1 1 140px}
+  .extra-type{flex:1 1 100%}
+  .fee-label-input{flex:1 1 100%}
+  .preview-bar{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .preview-bar .btn{justify-content:center}
+  .preview-bar .saved-flag{grid-column:1 / -1; text-align:center}
+
+  /* the bar that stays above the tab bar while the form is filled in */
+  .m-actions{
+    display:flex !important; position:fixed; left:0; right:0; z-index:39;
+    bottom:0; padding-bottom:calc(8px + env(safe-area-inset-bottom)) !important;
+    align-items:center; gap:8px; padding:8px 12px;
+    background:rgba(255,255,255,.96); backdrop-filter:blur(8px);
+    border-top:1px solid var(--line); box-shadow:0 -4px 14px rgba(29,27,30,.06);
+  }
+  .m-actions-total{flex:1; min-width:0; line-height:1.15}
+  .m-actions-total small{display:block; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px}
+  .m-actions-total b{font-size:18px; font-variant-numeric:tabular-nums}
+  .m-actions .btn{min-height:44px; padding:8px 14px}
+  .has-m-actions{padding-bottom:70px}
+
+  /* ---------- History: a card per receipt ---------- */
+  table.list.resp thead{display:none}
+  table.list.resp, table.list.resp tbody{display:block}
+  table.list.resp tr{display:grid; grid-template-columns:1fr auto; gap:3px 12px; padding:12px 4px; border-bottom:1px solid #f1eef3}
+  table.list.resp td{display:block; padding:0; border:0}
+  table.list.resp td.r-num{grid-column:1; font-size:12px; color:var(--muted)}
+  table.list.resp td.r-num code{font-size:12px}
+  table.list.resp td.r-date{grid-column:2; grid-row:1; font-size:12px; color:var(--muted); text-align:right}
+  table.list.resp td.r-name{grid-column:1 / -1; font-weight:600; font-size:15px}
+  table.list.resp td.r-class{grid-column:1; font-size:13px; color:var(--muted)}
+  table.list.resp td.r-period{grid-column:1; font-size:13px}
+  table.list.resp td.num{grid-column:2; grid-row:3 / 5; align-self:center; font-size:16px; font-weight:600}
+  table.list.resp td.actions{grid-column:1 / -1; display:flex; gap:8px; justify-content:flex-end; padding-top:4px}
+  table.list.resp td.actions .btn-icon{border:1px solid var(--line); background:#fff}
+
+  /* ---------- Settings ---------- */
+  .layout.even{grid-template-columns:1fr}
+  .opt-row{flex-wrap:nowrap}
+  .opt-badge{display:none}
+  .ft-row{grid-template-columns:1fr auto}
+  .ft-row > input[type=text]{grid-column:1 / -1}
+  .sf-row{grid-template-columns:1fr auto}
+  .sf-row > input[type=text]{grid-column:1 / -1}
+
+  /* ---------- sign in ---------- */
+  .login{padding-top:4vh}
+}
+
+/* the phone-only pieces stay hidden on larger screens */
+.m-actions{display:none}
+.pm-mobile-only{display:none}
+
+/* the phone-only block at the top of a student's payment details */
+.pm-quick{border-bottom:1px dashed #e5d6de; padding-bottom:10px}
+.pm-quick .field{margin-bottom:10px}
+.pm-quick-receipts{margin:0; font-size:13px; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+
+@media (max-width:720px){
+  /* WhatsApp is the main way receipts leave the phone */
+  .preview-bar .btn-wa{grid-column:1 / -1; min-height:48px; font-size:15px}
+  .m-actions{gap:6px}
+  .m-actions .btn{padding:8px 11px}
+  .m-actions .btn-wa{padding:8px 13px}
+  .wa-again .btn{flex:1 1 auto; justify-content:center}
+}

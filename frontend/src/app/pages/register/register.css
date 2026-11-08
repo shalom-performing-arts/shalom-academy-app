@@ -1,0 +1,142 @@
+:host{display:block; min-height:100vh; background:#f6f1f8}
+
+.rg{--accent:#8e2b52; --accent2:#7c3aed; --ink:#2a1430; --soft:#f7f0fa; --line:#e7dcec; padding-bottom:40px}
+
+/* ---------- header band ---------- */
+.rg-hero{background:linear-gradient(125deg, #2a0f3c 0%, #74204f 55%, #d6336c 100%); color:#fff; padding:28px 16px 74px; position:relative; overflow:hidden}
+.rg-hero::after{content:"♪ ♫ ♩ ♬"; position:absolute; right:-10px; bottom:-26px; font-size:110px; letter-spacing:10px; opacity:.07; white-space:nowrap; pointer-events:none}
+.rg-hero-in{max-width:760px; margin:0 auto; display:flex; align-items:center; gap:16px}
+.rg-logo{flex:none; width:64px; height:64px; border-radius:18px; background:#fff; display:grid; place-items:center; box-shadow:0 10px 26px rgba(0,0,0,.25)}
+.rg-logo img{width:50px; height:50px; object-fit:contain}
+.rg-academy{margin:0; font-size:12.5px; letter-spacing:1.6px; text-transform:uppercase; opacity:.85}
+.rg-hero h1{margin:2px 0 0; font-family:var(--f-display); font-size:clamp(24px, 5vw, 34px); letter-spacing:.8px; line-height:1.15}
+
+/* ---------- body ---------- */
+.rg-main{max-width:760px; margin:-52px auto 0; padding:0 16px; position:relative; display:flex; flex-direction:column; gap:14px}
+.rg-card{background:#fff; border-radius:22px; padding:22px; box-shadow:0 16px 40px rgba(58,18,56,.10); border:1px solid #efe6f2}
+.rg-intro{border-top:5px solid var(--accent); font-size:15.5px; line-height:1.6; color:#47304d}
+.rg-intro p{margin:0; white-space:pre-line}
+.rg-preview{padding:12px 16px; border-radius:14px; background:#fff7d6; color:#7a5300; border:1px solid #f3dd8c; font-size:14px}
+
+/* ---------- progress ---------- */
+.rg-progress{background:#fff; border-radius:18px; padding:16px 18px 12px; box-shadow:0 8px 24px rgba(58,18,56,.06); border:1px solid #efe6f2}
+.rg-bar{height:8px; border-radius:99px; background:#efe6f2; overflow:hidden}
+.rg-bar i{display:block; height:100%; border-radius:99px; background:linear-gradient(90deg, #d6336c, #7c3aed); transition:width .35s ease}
+.rg-progress ol{list-style:none; margin:12px 0 0; padding:0; display:grid; grid-template-columns:repeat(5, 1fr); gap:4px}
+.rg-progress li button{width:100%; border:0; background:none; padding:2px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; font:inherit; color:#9b8aa2}
+.rg-progress li button:disabled{cursor:default}
+.rg-dot{width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:13px; background:#f1eaf4; color:#9b8aa2; transition:all .2s}
+.rg-step-name{font-size:12px; font-weight:600; text-align:center; line-height:1.2}
+.rg-progress li.is-done .rg-dot{background:#dcf7ea; color:#0f9f6e}
+.rg-progress li.is-on .rg-dot{background:linear-gradient(135deg, #d6336c, #7c3aed); color:#fff; box-shadow:0 6px 14px rgba(124,58,237,.35); transform:scale(1.08)}
+.rg-progress li.is-on .rg-step-name{color:var(--ink)}
+.rg-step-of{display:none; margin:10px 0 0; font-size:13.5px; color:#6f6276; text-align:center}
+
+/* ---------- card head ---------- */
+.rg-card-head{display:flex; align-items:center; gap:14px; margin:-4px 0 20px; padding-bottom:16px; border-bottom:1px solid #f1e9f4}
+.rg-ico{flex:none; width:50px; height:50px; border-radius:16px; display:grid; place-items:center; font-size:26px; background:linear-gradient(135deg, #ffe3ee, #efe5ff)}
+.rg-card-head h2{margin:0; font-family:var(--f-display); font-size:22px; color:var(--accent); letter-spacing:.4px}
+.rg-card-head small{color:#7a6c80; font-size:13.5px}
+
+/* ---------- fields ---------- */
+.rg-field{display:block; margin-bottom:18px}
+.rg-field > span{display:block; font-size:14.5px; font-weight:700; color:var(--ink); margin-bottom:7px}
+.rg-field > span i, .rg-consent i, .rg-small i{color:#d6336c; font-style:normal}
+.rg-field > span em{font-style:normal; font-weight:400; color:#8a7c90; font-size:13px; margin-left:4px}
+.rg-field input[type=text], .rg-field input[type=tel], .rg-field input[type=email], .rg-field input[type=date],
+.rg-field select, .rg-field textarea{
+  width:100%; font:inherit; font-size:16px; padding:12px 14px; border-radius:12px; border:1.5px solid var(--line);
+  background:#fcfafd; color:var(--ink); transition:border-color .15s, box-shadow .15s, background .15s; min-height:50px;
+}
+.rg-field textarea{resize:vertical; line-height:1.5}
+.rg-field input:focus, .rg-field select:focus, .rg-field textarea:focus{outline:none; border-color:var(--accent2); background:#fff; box-shadow:0 0 0 4px rgba(124,58,237,.14)}
+.rg-field.bad input, .rg-field.bad textarea{border-color:#e5484d; background:#fff8f8}
+.rg-err{display:block; margin-top:6px; font-style:normal; font-size:13.5px; color:#c62a2f; font-weight:600}
+.rg-err::before{content:"⚠ "}
+.rg-ok{display:inline-block; margin-top:6px; font-style:normal; font-size:13px; font-weight:700; color:#0b6b3f; background:#e3f6ec; padding:2px 10px; border-radius:99px}
+.rg-two{display:grid; grid-template-columns:1fr 1fr; gap:0 16px}
+
+.rg-pills{display:flex; flex-wrap:wrap; gap:8px}
+.rg-pills button{border:1.5px solid var(--line); background:#fff; color:#4b3752; font:inherit; font-size:15px; font-weight:600; padding:10px 16px; border-radius:99px; cursor:pointer; min-height:46px; transition:all .15s}
+.rg-pills button:hover{border-color:#cdb6d8}
+.rg-pills button.is-on{background:linear-gradient(135deg, #d6336c, #7c3aed); border-color:transparent; color:#fff; box-shadow:0 6px 16px rgba(124,58,237,.25)}
+.rg-field.bad .rg-pills button{border-color:#f0b4b6}
+
+.rg-cards{display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:10px}
+.rg-choice{display:flex; align-items:center; gap:12px; text-align:left; border:1.5px solid var(--line); background:#fff; border-radius:16px; padding:14px 16px; font:inherit; font-size:15.5px; font-weight:700; color:var(--ink); cursor:pointer; min-height:62px; transition:all .15s}
+.rg-choice b{font-size:26px}
+.rg-choice.is-on{border-color:var(--accent2); background:#f5efff; box-shadow:0 0 0 3px rgba(124,58,237,.16)}
+
+.rg-check{display:flex; align-items:center; gap:8px; font-size:14px; color:#5b4660; margin:0 0 8px; cursor:pointer}
+.rg-check input, .rg-consent input{width:22px; height:22px; accent-color:var(--accent2); flex:none}
+.rg-consent{display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:14px; background:var(--soft); border:1.5px solid transparent; margin-bottom:12px; cursor:pointer; font-size:14.5px; line-height:1.55; color:#47304d}
+.rg-consent input{margin-top:2px}
+.rg-consent b{color:var(--ink)}
+.rg-consent em{font-style:normal; color:#8a7c90}
+.rg-consent.bad{border-color:#e5484d; background:#fff4f4}
+
+/* ---------- review ---------- */
+.rg-review{display:grid; gap:12px}
+.rg-rev{border:1px solid #efe6f2; border-radius:16px; overflow:hidden}
+.rg-rev header{display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--soft)}
+.rg-rev header b{font-size:15px; color:var(--ink)}
+.rg-rev header button{border:0; background:#fff; color:var(--accent2); font:inherit; font-weight:700; font-size:13.5px; padding:6px 14px; border-radius:99px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.rg-rev dl{margin:0; padding:10px 14px; display:grid; grid-template-columns:150px 1fr; gap:6px 12px; font-size:14.5px}
+.rg-rev dt{color:#7a6c80}
+.rg-rev dd{margin:0; color:var(--ink); font-weight:600; overflow-wrap:anywhere; white-space:pre-line}
+.rg-send-err{margin:14px 0 0; padding:12px 14px; border-radius:12px; background:#fff1f1; color:#a32626; font-weight:600}
+
+/* ---------- footer buttons ---------- */
+.rg-foot{display:flex; align-items:center; gap:10px; margin-top:22px; padding-top:18px; border-top:1px solid #f1e9f4}
+.rg-space{flex:1}
+.rg-btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; border:0; border-radius:14px; padding:13px 22px; font:inherit; font-size:16px; font-weight:800; cursor:pointer; min-height:52px; text-decoration:none; transition:transform .1s, box-shadow .15s}
+.rg-btn:active{transform:scale(.98)}
+.rg-go{background:linear-gradient(135deg, #d6336c, #7c3aed); color:#fff; box-shadow:0 10px 24px rgba(124,58,237,.3); min-width:150px}
+.rg-go:disabled{opacity:.6; cursor:wait}
+.rg-send{background:linear-gradient(135deg, #16a34a, #0f766e); box-shadow:0 10px 24px rgba(15,118,110,.3)}
+.rg-ghost{background:#f3edf6; color:#5b4660}
+.rg-wa{background:#128c4b; color:#fff; box-shadow:0 10px 24px rgba(18,140,75,.25)}
+.rg-small{margin:0; text-align:center; font-size:13px; color:#8a7c90}
+
+/* ---------- messages ---------- */
+.rg-msg{text-align:center; padding:40px 24px}
+.rg-msg h2{margin:8px 0; font-family:var(--f-display); color:var(--accent)}
+.rg-msg p{color:#5b4660; line-height:1.6; white-space:pre-line}
+.rg-big{font-size:52px}
+.rg-wait{color:#8a7c90}
+
+/* ---------- thank you ---------- */
+.rg-done{text-align:center; padding:34px 22px 26px}
+.rg-tick svg{width:86px; height:86px}
+.rg-tick circle{fill:#e3f6ec; stroke:#16a34a; stroke-width:2.5; stroke-dasharray:160; stroke-dashoffset:160; animation:rg-draw .6s ease-out forwards}
+.rg-tick path{fill:none; stroke:#16a34a; stroke-width:4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:40; stroke-dashoffset:40; animation:rg-draw .4s .45s ease-out forwards}
+@keyframes rg-draw{to{stroke-dashoffset:0}}
+.rg-done h2{margin:10px 0 4px; font-family:var(--f-display); font-size:28px; color:#0b6b3f}
+.rg-done-who{margin:0; font-size:17px; color:#47304d}
+.rg-number{display:inline-flex; flex-direction:column; gap:2px; margin:18px auto; padding:16px 28px; border-radius:18px; background:linear-gradient(135deg, #fff1f6, #f3ecff); border:2px dashed #d9c3ea}
+.rg-number small{font-size:12px; color:#8a7c90; text-transform:uppercase; letter-spacing:1px}
+.rg-number b{font-size:30px; letter-spacing:1.5px; color:var(--accent); font-variant-numeric:tabular-nums}
+.rg-thanks{max-width:520px; margin:0 auto 16px; color:#5b4660; line-height:1.6; white-space:pre-line}
+.rg-next{list-style:none; margin:0 auto 22px; padding:0; max-width:420px; text-align:left; display:grid; gap:8px}
+.rg-next li{display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:12px; background:var(--soft); font-size:14.5px; color:#47304d}
+.rg-next span{flex:none; width:26px; height:26px; border-radius:50%; display:grid; place-items:center; background:#fff; color:var(--accent2); font-weight:800; font-size:13px}
+.rg-done-act{display:flex; flex-wrap:wrap; justify-content:center; gap:10px}
+
+/* ---------- phones ---------- */
+@media (max-width:600px){
+  .rg-hero{padding:20px 16px 64px}
+  .rg-logo{width:52px; height:52px; border-radius:14px}
+  .rg-logo img{width:40px; height:40px}
+  .rg-card{padding:18px 16px; border-radius:18px}
+  .rg-two{grid-template-columns:1fr}
+  .rg-step-name{display:none}
+  .rg-step-of{display:block}
+  .rg-progress ol{margin-top:10px}
+  .rg-rev dl{grid-template-columns:1fr; gap:0}
+  .rg-rev dd{margin-bottom:8px}
+  .rg-foot{position:sticky; bottom:0; background:#fff; margin:22px -16px -18px; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-radius:0 0 18px 18px; box-shadow:0 -8px 20px rgba(58,18,56,.06)}
+  .rg-go{flex:1}
+  .rg-cards{grid-template-columns:1fr 1fr}
+  .rg-choice{flex-direction:column; text-align:center; gap:4px; font-size:14px}
+  .rg-done-act .rg-btn{width:100%}
+}
