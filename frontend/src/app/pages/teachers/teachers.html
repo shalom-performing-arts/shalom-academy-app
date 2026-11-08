@@ -264,7 +264,15 @@
               <input #note type="text" placeholder="Reason (advance, bonus…)" [value]="l.adjustmentNote" [disabled]="!!l.paidAt"
                      (change)="adjust(l, amt.value, note.value)">
             </div>
-            <div class="tc-sal-total"><small>Total</small><b>Rs. {{ money(l.total) }}</b></div>
+            <div class="tc-sal-total"><small>Total</small><b>Rs. {{ money(l.total) }}</b>
+              @if (l.paidAt && l.paidAmount != null && +l.paidAmount !== +l.total) {
+                <!-- the classes changed after paying (e.g. a teacher took back a mark) -->
+                <em class="tc-sal-diff" [title]="'Paid Rs. ' + money(l.paidAmount) + ' on ' + date(l.paidAt)">
+                  Paid Rs. {{ money(l.paidAmount) }} ·
+                  {{ +l.total < +l.paidAmount ? 'overpaid' : 'still to pay' }} Rs. {{ money(abs(+l.total - +l.paidAmount)) }}
+                </em>
+              }
+            </div>
             <div class="tc-sal-paid">
               @if (l.paidAt) {
                 <button type="button" class="tc-paid-btn on" (click)="setPaid(l, false)" title="Undo">✓ Paid {{ date(l.paidAt) }}</button>

@@ -93,6 +93,8 @@ export interface PayLine {
   adjustmentNote: string;
   total: number;
   paidAt: string | null;
+  /** what was actually paid, when marked paid (the total can change after, if a mark is taken back) */
+  paidAmount: number | null;
 }
 
 export interface SalaryOut {

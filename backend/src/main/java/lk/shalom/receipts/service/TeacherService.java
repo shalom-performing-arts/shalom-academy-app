@@ -210,7 +210,8 @@ public class TeacherService {
 
     public record PayLine(String teacherId, String name, String colour, int weekday, int weekend,
                           BigDecimal weekdayPay, BigDecimal weekendPay, BigDecimal classPay, BigDecimal transport,
-                          BigDecimal adjustment, String adjustmentNote, BigDecimal total, Instant paidAt) {}
+                          BigDecimal adjustment, String adjustmentNote, BigDecimal total, Instant paidAt,
+                          BigDecimal paidAmount) {}
 
     public record SalaryOut(String period, String payDate, Rates rates, List<PayLine> lines,
                             int weekday, int weekend, BigDecimal classPay, BigDecimal transport,
@@ -242,11 +243,14 @@ public class TeacherService {
             Adjustment adj = b.adjustments().stream()
                     .filter(a -> a.period().equals(period) && a.teacherId().equals(t.id())).findFirst().orElse(null);
             BigDecimal adjustment = adj == null || adj.amount() == null ? BigDecimal.ZERO : adj.amount();
-            Instant paid = b.payouts().stream().filter(p -> p.period().equals(period) && p.teacherId().equals(t.id()))
-                    .map(Payout::paidAt).findFirst().orElse(null);
+            Payout payout = b.payouts().stream().filter(p -> p.period().equals(period) && p.teacherId().equals(t.id()))
+                    .findFirst().orElse(null);
+            // the total always follows the marks (a mark taken back lowers it); what was actually paid
+            // is kept beside it, so a change after paying shows as a difference
             lines.add(new PayLine(t.id(), t.name(), t.colour(), wd, we, wdPay, wePay, classPay, transport,
                     adjustment, adj == null ? "" : Objects.requireNonNullElse(adj.note(), ""),
-                    classPay.add(transport).add(adjustment), paid));
+                    classPay.add(transport).add(adjustment), payout == null ? null : payout.paidAt(),
+                    payout == null ? null : payout.amount()));
         }
         return new SalaryOut(period, periodEnd(period).toString(), r, lines,
                 lines.stream().mapToInt(PayLine::weekday).sum(), lines.stream().mapToInt(PayLine::weekend).sum(),

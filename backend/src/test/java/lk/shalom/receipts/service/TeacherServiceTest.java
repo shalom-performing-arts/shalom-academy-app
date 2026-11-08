@@ -110,12 +110,16 @@ class TeacherServiceTest {
         TeacherService s = at("2026-11-04T16:00");
         s.saveSetup(new TeacherService.SetupInput(null, null, null, new Site(LAT, LNG, 150, 45, 15)));
         s.checkIn("ijini", new CheckIn("wed-1530-kids", LAT, LNG, 10.0));
+        assertThat(line(s, "ijini").total()).isEqualByComparingTo("5700");   // 700 + 5000 transport
         s.unmark("ijini", new Unmark("wed-1530-kids"));
         assertThat(state(s, "wed-1530-kids")).isEqualTo(SlotState.OPEN);
+        // the salary follows at once: no class, so no class pay and no transport
         assertThat(line(s, "ijini").weekday()).isEqualTo(0);
+        assertThat(line(s, "ijini").total()).isEqualByComparingTo("0");
         // and mark it again
         s.checkIn("ijini", new CheckIn("wed-1530-kids", LAT, LNG, 10.0));
         assertThat(line(s, "ijini").weekday()).isEqualTo(1);
+        assertThat(line(s, "ijini").total()).isEqualByComparingTo("5700");
         assertThat(today(s, "wed-1530-kids").canUndo()).isTrue();
 
         // the office's tick stays with the office
@@ -126,9 +130,13 @@ class TeacherServiceTest {
                 .hasMessageContaining("office marked");
         // a period marked paid does not stop the teacher taking back today's mark
         s.setPaid("2026-11", "ijini", true);
+        assertThat(line(s, "ijini").paidAmount()).isEqualByComparingTo("6400");   // 2 × 700 + 5000
         assertThat(today(s, "wed-1530-kids").canUndo()).isTrue();
         s.unmark("ijini", new Unmark("wed-1530-kids"));
         assertThat(state(s, "wed-1530-kids")).isEqualTo(SlotState.OPEN);
+        // the total drops; what was paid stays, so the office sees the Rs. 700 difference
+        assertThat(line(s, "ijini").total()).isEqualByComparingTo("5700");
+        assertThat(line(s, "ijini").paidAmount()).isEqualByComparingTo("6400");
     }
 
     private static TeacherService.TodayClass today(TeacherService s, String slot) {

@@ -34,6 +34,7 @@ export class Teachers {
   protected store = inject(Store);
 
   protected readonly money = money;
+  protected readonly abs = Math.abs;
   protected readonly clock12 = clock12;
   protected readonly DAYS = DAYS;
   protected readonly COLOURS = TEACHER_COLOURS;
