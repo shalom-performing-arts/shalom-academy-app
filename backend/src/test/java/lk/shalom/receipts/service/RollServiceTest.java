@@ -58,6 +58,19 @@ class RollServiceTest {
     }
 
     @Test
+    void aTeachersTimetableSlotShowsTheSessionMeetingThenWithItsActiveStudents() {
+        var slots = java.util.List.of(
+                new lk.shalom.receipts.model.TeacherBook.Slot("wed-1530-kids", "Wednesday", "15:30", 60, "Kids", "Kids 1"),
+                new lk.shalom.receipts.model.TeacherBook.Slot("sat-1130-kids", "Saturday", "11:30", 60, "Kids", "Kids 3"),
+                new lk.shalom.receipts.model.TeacherBook.Slot("fri-0900-none", "Friday", "09:00", 60, "Kids", "Nothing"));
+        var info = at("2026-11-04T10:00").classInfo(slots);
+        assertThat(info.get("wed-1530-kids").session()).isEqualTo("Forte");
+        assertThat(info.get("wed-1530-kids").students()).isEqualTo(3);        // the inactive student is not counted
+        assertThat(info.get("sat-1130-kids").session()).isEqualTo("Fortissimo");
+        assertThat(info).doesNotContainKey("fri-0900-none");
+    }
+
+    @Test
     void classTimesAreReadTheWayTheyAreWritten() {
         assertThat(RollService.times("3:30 - 4:30 PM")).isEqualTo(new RollService.Times(LocalTime.of(15, 30), LocalTime.of(16, 30)));
         assertThat(RollService.times("11:30 AM - 12:30 PM").start()).isEqualTo(LocalTime.of(11, 30));

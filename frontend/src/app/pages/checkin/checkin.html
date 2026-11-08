@@ -1,5 +1,11 @@
 <section class="ci">
 
+  <!-- always at hand: stays at the top while scrolling -->
+  <div class="ci-topbar">
+    <span class="ci-topbar-who">👤 {{ name() }}</span>
+    <button type="button" class="ci-topbar-out" (click)="auth.logout()">⎋ Sign out</button>
+  </div>
+
   <!-- ============ hello ============ -->
   <header class="ci-hello">
     <div>
@@ -81,9 +87,20 @@
             @case ('HOLIDAY') { <span class="ci-badge later">No class</span> }
           }
         </div>
-        <h3 class="ci-card-title">{{ c.slot.label }}</h3>
+        @let info = m.classInfo?.[c.slot.id];
+        <div class="ci-card-head">
+          @if (info?.symbol) {
+            <span class="ci-sym" [class.italic]="info?.symbolStyle === 'italic'" aria-hidden="true">{{ info?.symbol }}</span>
+          }
+          <div>
+            <h3 class="ci-card-title">{{ info?.session || c.slot.label }}</h3>
+            @if (info?.meaning) { <p class="ci-card-meaning">“{{ info?.meaning }}”{{ info?.family ? ' · ' + info?.family : '' }}</p> }
+          </div>
+        </div>
         <p class="ci-card-sub">
           <span class="ci-cat">{{ c.slot.category }}</span>
+          @if (info?.session && info?.session !== c.slot.label) { <span>{{ c.slot.label }}</span> }
+          @if (info) { <span>🎓 {{ info.students }}{{ info.max ? ' / ' + info.max : '' }} students</span> }
           @if (c.others.length) { <span>👥 with {{ c.others.join(', ') }}</span> }
         </p>
 
@@ -129,10 +146,31 @@
     <!-- ============ coming up ============ -->
     @if (m.next.length) {
       <h2 class="ci-h2">Coming up</h2>
-      <div class="ci-next">
+      <div class="ci-up">
         @for (d of m.next; track d.date) {
-          <div class="ci-next-day"><b>{{ d.label }}</b>
-            @for (x of d.classes; track $index) { <small>{{ x }}</small> }
+          <div class="ci-up-day">
+            <p class="ci-up-date"><b>{{ d.label.split(' ')[0] }}</b>{{ d.label.split(' ').slice(1).join(' ') }}</p>
+            <div class="ci-up-list">
+              @for (u of d.slots ?? []; track u.slot.id) {
+                @let ui = m.classInfo?.[u.slot.id];
+                <div class="ci-up-class" [style.--c]="colour(u.slot.category)">
+                  <span class="ci-up-time">{{ u.time }}</span>
+                  <div class="ci-up-what">
+                    <b>
+                      @if (ui?.symbol) { <span class="ci-up-sym" [class.italic]="ui?.symbolStyle === 'italic'">{{ ui?.symbol }}</span> }
+                      {{ ui?.session || u.slot.label }}
+                    </b>
+                    <small>
+                      {{ u.slot.category }}{{ ui?.session && ui?.session !== u.slot.label ? ' · ' + u.slot.label : '' }}
+                      @if (ui?.meaning) { · “{{ ui?.meaning }}” }
+                      @if (ui) { · 🎓 {{ ui.students }}{{ ui.max ? '/' + ui.max : '' }} }
+                    </small>
+                  </div>
+                </div>
+              } @empty {
+                @for (x of d.classes; track $index) { <div class="ci-up-class"><div class="ci-up-what"><b>{{ x }}</b></div></div> }
+              }
+            </div>
           </div>
         }
       </div>

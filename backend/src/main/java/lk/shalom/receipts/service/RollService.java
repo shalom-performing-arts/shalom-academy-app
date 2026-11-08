@@ -493,6 +493,38 @@ public class RollService {
     }
 
     /* =========================================================
+       The student session behind a teacher's timetable slot
+       ========================================================= */
+
+    /**
+     * What a teacher sees about a class: the session's name and musical term ("Forte" · Dynamics ·
+     * "loud and strong" · f), its size limit and how many active students it has.
+     */
+    public record ClassInfo(String session, String family, String meaning, String symbol, String symbolStyle,
+                            Integer max, int students) {}
+
+    /**
+     * For each timetable slot, the session meeting on the same day at the same start time, of the
+     * same class (Kids, Junior …) when there is one; slots with no matching session are left out.
+     */
+    public Map<String, ClassInfo> classInfo(List<lk.shalom.receipts.model.TeacherBook.Slot> slots) {
+        Roster r = roster.load();
+        Map<String, ClassInfo> out = new java.util.LinkedHashMap<>();
+        for (var slot : slots) {
+            LocalTime start;
+            try { start = LocalTime.parse(slot.start()); } catch (RuntimeException e) { continue; }
+            List<Session> same = r.sessions().stream().filter(s -> slot.day() != null && slot.day().equalsIgnoreCase(s.day())
+                    && times(s.time()).start().equals(start)).toList();
+            Session s = same.stream().filter(x -> x.category() != null && x.category().equalsIgnoreCase(slot.category()))
+                    .findFirst().orElse(same.size() == 1 ? same.getFirst() : null);
+            if (s == null) continue;
+            int students = (int) r.students().stream().filter(st -> st.active() && s.name().equalsIgnoreCase(st.session())).count();
+            out.put(slot.id(), new ClassInfo(s.name(), s.family(), s.meaning(), s.symbol(), s.symbolStyle(), s.max(), students));
+        }
+        return out;
+    }
+
+    /* =========================================================
        Helpers
        ========================================================= */
 

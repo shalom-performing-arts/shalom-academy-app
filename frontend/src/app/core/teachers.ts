@@ -167,7 +167,20 @@ export interface MeOut {
   pay: PayLine | null;
   period: string;
   periodLabel: string;
-  next: { date: string; label: string; classes: string[] }[];
+  next: { date: string; label: string; classes: string[]; slots?: { slot: Slot; time: string }[] }[];
+  /** the student session behind each slot, by slot id (slots with no matching session are missing) */
+  classInfo?: Record<string, ClassInfo>;
+}
+
+/** A class as teachers know it: "Forte" · Dynamics · "loud and strong" · f · 6 of 8 students */
+export interface ClassInfo {
+  session: string;
+  family: string | null;
+  meaning: string | null;
+  symbol: string | null;
+  symbolStyle: string | null;
+  max: number | null;
+  students: number;
 }
 
 /** The teacher endpoints: the office's under /api/teachers, a teacher's own under /api/me. */

@@ -53,24 +53,29 @@ public class MeController {
 
     @GetMapping
     public MeOut me(HttpServletRequest request) {
-        return service.me(teacher(request));
+        return withInfo(service.me(teacher(request)));
     }
 
     @PostMapping("/checkin")
     public MeOut checkIn(@RequestBody CheckIn in, HttpServletRequest request) {
-        return service.checkIn(teacher(request), in);
+        return withInfo(service.checkIn(teacher(request), in));
     }
 
     /** Takes back the teacher's own mark for one of today's classes. */
     @PostMapping("/unmark")
     public MeOut unmark(@RequestBody TeacherService.Unmark in, HttpServletRequest request) {
-        return service.unmark(teacher(request), in);
+        return withInfo(service.unmark(teacher(request), in));
     }
 
     /** After the class: the teacher confirms they taught it, with an optional note on what was covered. */
     @PostMapping("/done")
     public MeOut done(@RequestBody TeacherService.Finish in, HttpServletRequest request) {
-        return service.finish(teacher(request), in);
+        return withInfo(service.finish(teacher(request), in));
+    }
+
+    /** adds each class's session name, musical term and student numbers */
+    private MeOut withInfo(MeOut me) {
+        return me.withClassInfo(roll.classInfo(me.slots()));
     }
 
     private static String teacher(HttpServletRequest request) {

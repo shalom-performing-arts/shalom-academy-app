@@ -364,9 +364,27 @@ public class TeacherService {
 
     public record MeOut(TeacherOut teacher, String date, String dateLabel, Holiday holiday, boolean siteSet,
                         Integer radius, Double siteLat, Double siteLng, List<TodayClass> today, PayLine pay,
-                        String period, String periodLabel, List<UpcomingDay> next) {}
+                        String period, String periodLabel, List<UpcomingDay> next,
+                        Map<String, RollService.ClassInfo> classInfo) {
 
-    public record UpcomingDay(String date, String label, List<String> classes) {}
+        /** the student session behind each slot (by slot id), from {@link RollService#classInfo} */
+        public MeOut withClassInfo(Map<String, RollService.ClassInfo> info) {
+            return new MeOut(teacher, date, dateLabel, holiday, siteSet, radius, siteLat, siteLng, today, pay,
+                    period, periodLabel, next, info);
+        }
+
+        /** every slot on the page: today's and the coming days' */
+        public List<Slot> slots() {
+            List<Slot> all = new ArrayList<>(today.stream().map(TodayClass::slot).toList());
+            next.forEach(d -> d.slots().forEach(c -> all.add(c.slot())));
+            return all;
+        }
+    }
+
+    /** @param classes "3:30 PM · Kids 1" (kept for older pages); slots: the same classes in full */
+    public record UpcomingDay(String date, String label, List<String> classes, List<UpcomingClass> slots) {}
+
+    public record UpcomingClass(Slot slot, String time) {}
 
     public MeOut me(String teacherId) {
         Teacher t = teacher(teacherId);
@@ -413,11 +431,12 @@ public class TeacherService {
             List<Slot> sx = slotsOn(b, x);
             if (sx.isEmpty() || (hx != null && hx.off())) continue;
             next.add(new UpcomingDay(x.toString(), dayName(x) + " " + x.format(SHORT),
-                    sx.stream().map(s -> clock12(Objects.requireNonNull(startTime(s))) + " · " + s.label()).toList()));
+                    sx.stream().map(s -> clock12(Objects.requireNonNull(startTime(s))) + " · " + s.label()).toList(),
+                    sx.stream().map(s -> new UpcomingClass(s, timeRange(s))).toList()));
         }
         return new MeOut(out(t), d.toString(), dayName(d) + ", " + d.format(LABEL), h, site.isSet(), site.radiusM(),
                 site.lat(), site.lng(), classes, pay, period, "Salary " + periodEnd(period).format(LABEL) + " · " + periodStart(period).format(SHORT)
-                + " – " + periodEnd(period).format(SHORT), next);
+                + " – " + periodEnd(period).format(SHORT), next, Map.of());
     }
 
     public record CheckIn(String slotId, Double lat, Double lng, Double accuracy) {}
