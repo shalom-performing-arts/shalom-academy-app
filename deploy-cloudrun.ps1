@@ -27,24 +27,41 @@ if (-not $repo) {
 }
 
 Write-Host '2. Passwords and the database, kept in Secret Manager...' -ForegroundColor Cyan
-function Ensure-Secret([string]$name, [string]$prompt, [bool]$hidden) {
-    $exists = gcloud secrets list --filter="name~/$name$" --format='value(name)' 2>$null
-    if ($exists) { Write-Host "   ${name}: already set (kept)"; return }
-    if ($hidden) {
-        $s = Read-Host $prompt -AsSecureString
-        $v = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-    } else { $v = Read-Host $prompt }
+function Test-Secret([string]$name) {
+    [bool](gcloud secrets list --filter="name~/$name$" --format='value(name)' 2>$null)
+}
+function Save-Secret([string]$name, [string]$value) {
+    if (Test-Secret $name) { Write-Host "   ${name}: already set (kept)"; return }
     $tmp = New-TemporaryFile
     try {
-        [IO.File]::WriteAllText($tmp, $v)
+        [IO.File]::WriteAllText($tmp, $value)
         gcloud secrets create $name --data-file=$tmp --replication-policy=automatic | Out-Null
     } finally { Remove-Item $tmp -Force }
     Write-Host "   ${name}: saved"
 }
-Ensure-Secret 'shalom-app-password' 'Office sign-in password for the app (choose a strong one)' $true
-Ensure-Secret 'shalom-db-url'      'Database JDBC URL (from Neon: Connect > Java)' $false
-Ensure-Secret 'shalom-db-user'     'Database user name' $false
-Ensure-Secret 'shalom-db-password' 'Database password' $true
+
+# the office sign-in password: Enter keeps the one this computer already uses
+if (-not (Test-Secret 'shalom-app-password')) {
+    $file = Join-Path $PSScriptRoot 'backend\data\password.txt'
+    $current = if (Test-Path $file) { (Get-Content $file -Raw).Trim() } else { '' }
+    Write-Host ''
+    Write-Host 'Office sign-in password for the live app.' -ForegroundColor Cyan
+    if ($current) { Write-Host 'Press Enter to keep the password you use now, or type a new one.' -ForegroundColor DarkGray }
+    $s = Read-Host 'Office password' -AsSecureString
+    $typed = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+    $office = if ($typed) { $typed } else { $current }
+    if (-not $office) { throw 'An office password is needed.' }
+    Save-Secret 'shalom-app-password' $office
+} else { Write-Host '   shalom-app-password: already set (kept)' }
+
+# the database: one Neon connection string gives all three
+if (-not ((Test-Secret 'shalom-db-url') -and (Test-Secret 'shalom-db-user') -and (Test-Secret 'shalom-db-password'))) {
+    . (Join-Path $PSScriptRoot 'neon-connection.ps1')
+    $db = Read-NeonConnection
+    Save-Secret 'shalom-db-url' $db.Url
+    Save-Secret 'shalom-db-user' $db.User
+    Save-Secret 'shalom-db-password' $db.Password
+} else { Write-Host '   database details: already set (kept)' }
 
 # the Cloud Run service may read those secrets
 $projNum = gcloud projects describe $Project --format='value(projectNumber)'

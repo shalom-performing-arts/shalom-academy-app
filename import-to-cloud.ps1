@@ -12,11 +12,9 @@ $root = $PSScriptRoot
 $java = Join-Path $root '..\tools\jdk-21.0.13+9\bin\java.exe'
 if (-not (Test-Path $java)) { $java = 'java' }
 
-Write-Host 'Database details (from Neon: Connect > Java, or your Cloud SQL instance)' -ForegroundColor Cyan
-$url  = Read-Host 'JDBC URL  (e.g. jdbc:postgresql://ep-xxx.ap-southeast-1.aws.neon.tech/shalom?sslmode=require)'
-$user = Read-Host 'User name'
-$sec  = Read-Host 'Password' -AsSecureString
-$pass = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
+. (Join-Path $root 'neon-connection.ps1')
+$db = Read-NeonConnection
+$url = $db.Url; $user = $db.User; $pass = $db.Password
 
 Write-Host 'Building the app...' -ForegroundColor Cyan
 Push-Location (Join-Path $root 'backend')
