@@ -221,8 +221,14 @@ export class TeacherApi {
     return firstValueFrom(this.http.post<MeOut>('/api/me/done', { slotId, lat, lng, accuracy, note }));
   }
 
+  /** marks one of today's classes as taught (after the teacher confirms) */
   checkIn(slotId: string, lat: number, lng: number, accuracy: number) {
     return firstValueFrom(this.http.post<MeOut>('/api/me/checkin', { slotId, lat, lng, accuracy }));
+  }
+
+  /** takes back the teacher's own mark for one of today's classes */
+  unmark(slotId: string) {
+    return firstValueFrom(this.http.post<MeOut>('/api/me/unmark', { slotId }));
   }
 }
 

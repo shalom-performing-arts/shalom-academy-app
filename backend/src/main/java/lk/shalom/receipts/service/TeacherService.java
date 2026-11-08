@@ -383,13 +383,12 @@ public class TeacherService {
             LocalDateTime ends = start == null ? null : d.atTime(start).plusMinutes(s.length());
             LocalDateTime doneOpens = ends == null ? null : ends.minusMinutes(Site.DONE_EARLY);
             LocalDateTime doneCloses = ends == null ? null : ends.plusMinutes(site.done());
+            // one step: marked or not. Marking opens shortly before the class and stays open for the
+            // rest of the day; a teacher's own mark can be taken back the same day.
             SlotState st;
-            if (mine != null && mine.finished()) st = SlotState.COMPLETE;
-            else if (mine != null) st = doneOpens == null || now.isBefore(doneOpens) ? SlotState.IN_CLASS
-                    : now.isAfter(doneCloses) ? SlotState.UNFINISHED : SlotState.FINISH;
+            if (mine != null) st = SlotState.COMPLETE;
             else if (h != null && h.off()) st = SlotState.HOLIDAY;
             else if (opens == null || now.isBefore(opens)) st = SlotState.LATER;
-            else if (now.isAfter(closes)) st = SlotState.MISSED;
             else st = SlotState.OPEN;
             classes.add(new TodayClass(s, timeRange(s), st, opens == null ? "" : clock12(opens.toLocalTime()),
                     closes == null ? "" : clock12(closes.toLocalTime()), mine == null ? null : mine.at(),
@@ -441,19 +440,47 @@ public class TeacherService {
         LocalDateTime opens = d.atTime(start).minusMinutes(site.early());
         LocalDateTime closes = d.atTime(start).plusMinutes(s.length() + site.late());
         if (now.isBefore(opens)) {
-            throw ApiException.badRequest("Check-in for " + s.label() + " opens at " + clock12(opens.toLocalTime()) + ".");
+            throw ApiException.badRequest("Marking " + s.label() + " opens at " + clock12(opens.toLocalTime()) + ".");
         }
-        if (now.isAfter(closes)) {
-            throw ApiException.badRequest("Check-in for " + s.label() + " closed at " + clock12(closes.toLocalTime())
-                    + ". Ask the office to add it for you.");
-        }
+        // open for the rest of the day (the teacher has confirmed they taught it); earlier days are the office's
         repo.update(x -> {
             boolean already = x.attendance().stream().anyMatch(m -> m.date().equals(d.toString())
                     && m.slotId().equals(s.id()) && m.teacherId().equals(teacherId));
             if (!already) {
-                x.attendance().add(new Mark(d.toString(), s.id(), teacherId, SELF, Instant.now(clock),
-                        round(in.lat(), 6), round(in.lng(), 6), round(acc, 0), round(dist, 0)));
+                Instant when = Instant.now(clock);
+                x.attendance().add(new Mark(d.toString(), s.id(), teacherId, SELF, when,
+                        round(in.lat(), 6), round(in.lng(), 6), round(acc, 0), round(dist, 0))
+                        .withDone(when, "", round(dist, 0)));
             }
+            return x;
+        });
+        return me(teacherId);
+    }
+
+    public record Unmark(String slotId) {}
+
+    /**
+     * The teacher takes back their own mark for one of today's classes (marked by mistake).
+     * Only today's, only their own: the office's ticks and earlier days stay with the office.
+     */
+    public MeOut unmark(String teacherId, Unmark in) {
+        teacher(teacherId);
+        if (in == null || in.slotId() == null) throw ApiException.badRequest("Nothing was sent.");
+        LocalDate d = today();
+        TeacherBook b = repo.get();
+        Mark mine = b.attendance().stream().filter(m -> m.date().equals(d.toString()) && m.slotId().equals(in.slotId())
+                && m.teacherId().equals(teacherId)).findFirst().orElse(null);
+        if (mine == null) return me(teacherId);
+        if (!SELF.equals(mine.method())) {
+            throw ApiException.badRequest("The office marked this class for you. Please ask the office to change it.");
+        }
+        String period = periodOf(d);
+        if (b.payouts().stream().anyMatch(p -> p.period().equals(period) && p.teacherId().equals(teacherId))) {
+            throw ApiException.badRequest("This pay period has already been paid. Please ask the office to change it.");
+        }
+        repo.update(x -> {
+            x.attendance().removeIf(m -> m.date().equals(d.toString()) && m.slotId().equals(in.slotId())
+                    && m.teacherId().equals(teacherId) && SELF.equals(m.method()));
             return x;
         });
         return me(teacherId);

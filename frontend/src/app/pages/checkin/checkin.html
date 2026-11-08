@@ -68,7 +68,7 @@
     <h2 class="ci-h2">Today's classes</h2>
     @if (m.today.length) { <a class="ci-roll" routerLink="/roll">✋ Take the student register <span>→</span></a> }
     @if (nothingOpen(); as why) { <p class="ci-msg info">🕒 {{ why }}</p> }
-    @if (toFinish().length) { <p class="ci-msg finish">🎵 Class over? Tap <b>Class done</b> to confirm you taught it.</p> }
+    @if (open().length) { <p class="ci-msg finish">🎵 Taught a class today? Tap <b>Mark attended</b> — any time until the end of the day.</p> }
     @for (c of m.today; track c.slot.id) {
       <article class="ci-class" [class]="'ci-class st-' + c.state" [style.--c]="colour(c.slot.category)">
         <div class="ci-time">
@@ -82,37 +82,21 @@
         <div class="ci-act">
           @switch (c.state) {
             @case ('OPEN') {
-              <button type="button" class="ci-btn" [disabled]="!!busy()" (click)="checkIn(c)">
-                {{ busy() === c.slot.id ? 'Checking…' : 'Check in' }}</button>
-            }
-            @case ('IN_CLASS') {
-              <span class="ci-done in">✓ In class<small>since {{ time(c.checkedAt) }} · done from {{ c.doneOpensAt }}</small></span>
-            }
-            @case ('FINISH') {
-              <span class="ci-done in">✓ Checked in<small>{{ time(c.checkedAt) }}</small></span>
+              <button type="button" class="ci-btn" [disabled]="!!busy()" (click)="askMark(c)">
+                {{ busy() === c.slot.id ? 'Saving…' : 'Mark attended' }}</button>
             }
             @case ('COMPLETE') {
-              <span class="ci-done">✓✓ Done<small>{{ c.doneAt ? time(c.doneAt) : 'by the office' }}</small></span>
+              <span class="ci-done">✓ Attended
+                @if (c.method === 'self') {
+                  <button type="button" class="ci-undo" [disabled]="!!busy()" (click)="undo(c)">
+                    {{ busy() === c.slot.id ? 'Saving…' : 'Undo' }}</button>
+                } @else { <small>by the office</small> }
+              </span>
             }
-            @case ('UNFINISHED') { <span class="ci-missed">Not marked done<small>Ask the office</small></span> }
             @case ('LATER') { <span class="ci-later">Opens<b>{{ c.opensAt }}</b></span> }
-            @case ('MISSED') { <span class="ci-missed">Closed {{ c.closesAt }}<small>Ask the office</small></span> }
             @case ('HOLIDAY') { <span class="ci-later">No class</span> }
           }
         </div>
-        @if (c.state === 'FINISH') {
-          <!-- after the class: what was covered, and the confirmation -->
-          <div class="ci-finish">
-            <label>
-              <span>What did you cover? <em>(optional)</em></span>
-              <textarea rows="2" maxlength="300" placeholder="e.g. Scales in C, 'Twinkle Twinkle' with actions"
-                        [value]="notes()[c.slot.id] ?? ''" (input)="setNote(c.slot.id, $any($event.target).value)"></textarea>
-            </label>
-            <button type="button" class="ci-btn ci-btn-done" [disabled]="!!busy()" (click)="askFinish(c)">
-              {{ busy() === c.slot.id ? 'Saving…' : '🎉 Class done' }}</button>
-            <small class="ci-finish-by">Open until {{ c.doneClosesAt }}</small>
-          </div>
-        }
         @if (c.state === 'COMPLETE' && c.note) {
           <p class="ci-note">“{{ c.note }}”</p>
         }
@@ -163,9 +147,9 @@
   <button type="button" class="ci-signout" (click)="auth.logout()">Sign out</button>
 </section>
 
-<!-- ============ "Class done": are you sure? ============ -->
+<!-- ============ "Mark attended": are you sure? ============ -->
 @if (confirming(); as c) {
-  <div class="ci-confirm-bg" (click)="cancelFinish()">
+  <div class="ci-confirm-bg" (click)="cancelMark()">
     <div class="ci-confirm" role="alertdialog" aria-modal="true" aria-labelledby="ci-confirm-title"
          [style.--c]="colour(c.slot.category)" (click)="$event.stopPropagation()">
       <span class="ci-confirm-icon" aria-hidden="true">🎓</span>
@@ -173,8 +157,8 @@
       <p class="ci-confirm-class"><b>{{ c.slot.label }}</b><small>Today · {{ c.time }}</small></p>
       <p class="ci-confirm-text">Please confirm that you were at the academy and taught this class yourself.</p>
       <div class="ci-confirm-btns">
-        <button type="button" class="ci-confirm-no" (click)="cancelFinish()">No, go back</button>
-        <button type="button" class="ci-btn ci-btn-done" (click)="confirmFinish()">Yes, I taught this class</button>
+        <button type="button" class="ci-confirm-no" (click)="cancelMark()">No, go back</button>
+        <button type="button" class="ci-btn ci-btn-done" (click)="confirmMark()">Yes, I taught this class</button>
       </div>
     </div>
   </div>

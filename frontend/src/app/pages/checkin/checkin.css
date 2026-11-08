@@ -148,3 +148,8 @@
 @media (min-width:600px){ .ci-confirm-bg{align-items:center} }
 @keyframes ci-fade{from{opacity:0}}
 @keyframes ci-up{from{transform:translateY(24px); opacity:0}}
+
+/* a teacher's own mark can be taken back the same day */
+.ci-undo{display:block; margin:4px 0 0 auto; padding:4px 10px; min-height:32px; border-radius:10px; border:1px solid #e2d6e6;
+  background:#fff; color:#6d1f3e; font:inherit; font-size:12.5px; font-weight:700; cursor:pointer}
+.ci-undo:disabled{opacity:.6; cursor:default}

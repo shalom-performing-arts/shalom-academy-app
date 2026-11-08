@@ -61,6 +61,12 @@ public class MeController {
         return service.checkIn(teacher(request), in);
     }
 
+    /** Takes back the teacher's own mark for one of today's classes. */
+    @PostMapping("/unmark")
+    public MeOut unmark(@RequestBody TeacherService.Unmark in, HttpServletRequest request) {
+        return service.unmark(teacher(request), in);
+    }
+
     /** After the class: the teacher confirms they taught it, with an optional note on what was covered. */
     @PostMapping("/done")
     public MeOut done(@RequestBody TeacherService.Finish in, HttpServletRequest request) {

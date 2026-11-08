@@ -50,28 +50,22 @@ export class CheckIn {
     return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   });
   protected readonly name = computed(() => this.me()?.teacher.name || this.auth.teacherName() || 'Teacher');
-  /** classes finished today (marked done, or ticked by the office) */
+  /** classes marked today (by the teacher, or ticked by the office) */
   protected readonly done = computed(() => (this.me()?.today ?? []).filter(c => c.state === 'COMPLETE').length);
-  /** classes with something to tap right now: check in, or mark done */
-  protected readonly open = computed(() => (this.me()?.today ?? []).filter(c => c.state === 'OPEN' || c.state === 'FINISH'));
-  protected readonly toFinish = computed(() => (this.me()?.today ?? []).filter(c => c.state === 'FINISH'));
+  /** classes that can be marked right now */
+  protected readonly open = computed(() => (this.me()?.today ?? []).filter(c => c.state === 'OPEN'));
   /** why there is no button to tap right now, if there isn't one */
   protected readonly nothingOpen = computed(() => {
     const m = this.me();
     if (!m || !m.today.length || this.open().length || m.holiday?.classOff) return '';
-    const inClass = m.today.find(c => c.state === 'IN_CLASS');
-    if (inClass) return `You're in ${inClass.slot.label}. Come back when it ends — you can mark it done from ${inClass.doneOpensAt}.`;
     const later = m.today.find(c => c.state === 'LATER');
-    if (later) return `No class is open for check-in yet. The next one, ${later.slot.label}, opens at ${later.opensAt}.`;
-    if (m.today.every(c => c.state === 'COMPLETE')) return '';
-    return 'Check-in for today\'s classes has closed. If you taught a class and could not check in, ask the office to add it.';
+    if (later) return `No class can be marked yet. The next one, ${later.slot.label}, opens at ${later.opensAt}.`;
+    return '';
   });
 
-  /** what each class covered, typed before marking it done */
-  protected readonly notes = signal<Record<string, string | undefined>>({});
   protected readonly classes = computed(() => this.me()?.pay ? this.me()!.pay!.weekday + this.me()!.pay!.weekend : 0);
 
-  /** the class whose "Class done" is waiting for the teacher's confirmation */
+  /** the class waiting for the teacher's "are you sure?" */
   protected readonly confirming = signal<TodayClass | null>(null);
 
   private watchId: number | null = null;
@@ -160,32 +154,10 @@ export class CheckIn {
     this.where.set({ kind: near ? 'here' : 'away', metres, accuracy: f.accuracy });
   }
 
-  /* ---------------- check in ---------------- */
+  /* ---------------- mark a class ---------------- */
 
-  protected async checkIn(c: TodayClass) {
-    if (this.busy()) return;
-    this.busy.set(c.slot.id);
-    this.message.set(null);
-    try {
-      // a reading older than two minutes is taken again, so the check-in is where they are now
-      const f = await this.current();
-      if (!f) {
-        this.message.set({ text: 'Your phone did not share its location. ' + this.whereHelp(), ok: false });
-        return;
-      }
-      this.me.set(await this.api.checkIn(c.slot.id, f.lat, f.lng, f.accuracy));
-      this.updateWhere();
-      this.message.set({ text: `✓ Checked in to ${c.slot.label} at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. Have a lovely class!`, ok: true });
-      navigator.vibrate?.(60);
-    } catch (e) {
-      this.message.set({ text: errorMessage(e, 'Could not check in.'), ok: false });
-    } finally {
-      this.busy.set('');
-    }
-  }
-
-  /** "Class done" first asks the teacher to confirm they really taught the class. */
-  protected askFinish(c: TodayClass) {
+  /** "Mark attended" first asks the teacher to confirm they really taught the class. */
+  protected askMark(c: TodayClass) {
     if (this.busy()) return;
     this.message.set(null);
     this.confirming.set(c);
@@ -193,18 +165,18 @@ export class CheckIn {
     if (!this.fix || Date.now() - this.fix.at > 60_000) void this.locate(60_000);
   }
 
-  protected cancelFinish() {
+  protected cancelMark() {
     this.confirming.set(null);
   }
 
-  protected confirmFinish() {
+  protected confirmMark() {
     const c = this.confirming();
     this.confirming.set(null);
-    if (c) void this.finish(c);
+    if (c) void this.mark(c);
   }
 
-  /** After the class: confirm it was taught, at the academy, with what was covered. */
-  private async finish(c: TodayClass) {
+  /** Marks the class as taught, at the academy (any time from shortly before it until the end of the day). */
+  private async mark(c: TodayClass) {
     if (this.busy()) return;
     this.busy.set(c.slot.id);
     this.message.set(null);
@@ -214,19 +186,30 @@ export class CheckIn {
         this.message.set({ text: 'Your phone did not share its location. ' + this.whereHelp(), ok: false });
         return;
       }
-      this.me.set(await this.api.finish(c.slot.id, f.lat, f.lng, f.accuracy, this.notes()[c.slot.id] ?? ''));
+      this.me.set(await this.api.checkIn(c.slot.id, f.lat, f.lng, f.accuracy));
       this.updateWhere();
-      this.message.set({ text: `🎉 ${c.slot.label} marked as done. Thank you!`, ok: true });
-      navigator.vibrate?.([40, 60, 40]);
+      this.message.set({ text: `✓ ${c.slot.label} marked. Thank you!`, ok: true });
+      navigator.vibrate?.(60);
     } catch (e) {
-      this.message.set({ text: errorMessage(e, 'Could not mark the class done.'), ok: false });
+      this.message.set({ text: errorMessage(e, 'Could not mark the class.'), ok: false });
     } finally {
       this.busy.set('');
     }
   }
 
-  protected setNote(slotId: string, text: string) {
-    this.notes.update(n => ({ ...n, [slotId]: text }));
+  /** Takes back a mark made by mistake (today only, their own). */
+  protected async undo(c: TodayClass) {
+    if (this.busy()) return;
+    this.busy.set(c.slot.id);
+    this.message.set(null);
+    try {
+      this.me.set(await this.api.unmark(c.slot.id));
+      this.message.set({ text: `${c.slot.label} is no longer marked.`, ok: true });
+    } catch (e) {
+      this.message.set({ text: errorMessage(e, 'Could not change the mark.'), ok: false });
+    } finally {
+      this.busy.set('');
+    }
   }
 
   protected whereHelp(): string {
