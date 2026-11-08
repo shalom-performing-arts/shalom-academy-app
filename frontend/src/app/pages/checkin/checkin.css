@@ -129,3 +129,22 @@
 .ci-roll{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 16px; border-radius:16px; text-decoration:none;
   background:linear-gradient(135deg, #e0f2fe, #f0f9ff); border:1px solid #bae6fd; color:#075985; font-weight:700; font-size:15px}
 .ci-roll span{font-size:20px}
+
+/* "Class done": are you sure? */
+.ci-confirm-bg{position:fixed; inset:0; z-index:50; display:flex; align-items:flex-end; justify-content:center;
+  padding:16px; background:rgba(30,10,30,.45); animation:ci-fade .15s ease-out}
+.ci-confirm{--c:#8e2b52; width:100%; max-width:440px; display:flex; flex-direction:column; gap:10px; text-align:center;
+  padding:22px 18px 18px; border-radius:22px; background:#fff; border-top:6px solid var(--c);
+  box-shadow:0 20px 50px rgba(30,10,30,.35); animation:ci-up .2s ease-out}
+.ci-confirm-icon{font-size:34px; line-height:1}
+.ci-confirm h2{margin:0; font-family:var(--f-display); font-size:20px; line-height:1.3; color:#3a1238}
+.ci-confirm-class{margin:0; padding:10px 12px; border-radius:14px; background:color-mix(in srgb, var(--c) 9%, #fff)}
+.ci-confirm-class b{display:block; font-size:16px; color:#2b1030}
+.ci-confirm-class small{font-size:13px; color:var(--muted)}
+.ci-confirm-text{margin:0; font-size:14.5px; line-height:1.45; color:#5b4660}
+.ci-confirm-btns{display:flex; flex-direction:column-reverse; gap:8px; margin-top:4px}
+.ci-confirm-no{min-height:48px; border-radius:14px; border:1px solid #e2d6e6; background:#fff; color:#5b4660;
+  font:inherit; font-weight:700; font-size:15px; cursor:pointer}
+@media (min-width:600px){ .ci-confirm-bg{align-items:center} }
+@keyframes ci-fade{from{opacity:0}}
+@keyframes ci-up{from{transform:translateY(24px); opacity:0}}

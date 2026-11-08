@@ -71,12 +71,25 @@ export class CheckIn {
   protected readonly notes = signal<Record<string, string | undefined>>({});
   protected readonly classes = computed(() => this.me()?.pay ? this.me()!.pay!.weekday + this.me()!.pay!.weekend : 0);
 
+  /** the class whose "Class done" is waiting for the teacher's confirmation */
+  protected readonly confirming = signal<TodayClass | null>(null);
+
+  private watchId: number | null = null;
+
   constructor() {
     this.load();
     this.locate();
+    this.watch();
     // class windows open and close through the day
     const t = setInterval(() => this.load(), 60_000);
-    inject(DestroyRef).onDestroy(() => clearInterval(t));
+    // keep the location fresh only while the page is on screen (saves the battery)
+    const onVisible = () => document.hidden ? this.unwatch() : this.watch();
+    document.addEventListener('visibilitychange', onVisible);
+    inject(DestroyRef).onDestroy(() => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', onVisible);
+      this.unwatch();
+    });
   }
 
   protected async load() {
@@ -91,10 +104,10 @@ export class CheckIn {
 
   /* ---------------- where am I ---------------- */
 
-  protected locate(): Promise<Fix | null> {
+  protected locate(maximumAge = 0): Promise<Fix | null> {
     if (!window.isSecureContext) { this.where.set({ kind: 'insecure' }); return Promise.resolve(null); }
     if (!('geolocation' in navigator)) { this.where.set({ kind: 'failed', message: 'This browser cannot share its location.' }); return Promise.resolve(null); }
-    this.where.set({ kind: 'looking' });
+    if (!this.fix) this.where.set({ kind: 'looking' });
     return new Promise(resolve => {
       navigator.geolocation.getCurrentPosition(
         p => {
@@ -107,9 +120,35 @@ export class CheckIn {
             : { kind: 'failed', message: err.code === err.TIMEOUT ? 'Finding your location took too long.' : 'Your location could not be found.' });
           resolve(null);
         },
-        { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
+        { enableHighAccuracy: true, timeout: 20_000, maximumAge },
       );
     });
+  }
+
+  /**
+   * Follows the phone's location while the page is open, so a reading is already there when
+   * "Check in" is tapped. Waiting for a brand-new GPS fix at the tap took several seconds.
+   */
+  private watch() {
+    if (this.watchId != null || !window.isSecureContext || !('geolocation' in navigator)) return;
+    this.watchId = navigator.geolocation.watchPosition(
+      p => {
+        this.fix = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy, at: Date.now() };
+        this.updateWhere();
+      },
+      () => { /* locate() reports problems; the watch just stays quiet */ },
+      { enableHighAccuracy: true, maximumAge: 15_000 },
+    );
+  }
+
+  private unwatch() {
+    if (this.watchId != null) navigator.geolocation.clearWatch(this.watchId);
+    this.watchId = null;
+  }
+
+  /** a reading from the last two minutes, or a new one (a reading from the last minute is fine) */
+  private current(): Promise<Fix | null> {
+    return this.fix && Date.now() - this.fix.at < 120_000 ? Promise.resolve(this.fix) : this.locate(60_000);
   }
 
   private updateWhere() {
@@ -129,7 +168,7 @@ export class CheckIn {
     this.message.set(null);
     try {
       // a reading older than two minutes is taken again, so the check-in is where they are now
-      const f = this.fix && Date.now() - this.fix.at < 120_000 ? this.fix : await this.locate();
+      const f = await this.current();
       if (!f) {
         this.message.set({ text: 'Your phone did not share its location. ' + this.whereHelp(), ok: false });
         return;
@@ -145,13 +184,32 @@ export class CheckIn {
     }
   }
 
+  /** "Class done" first asks the teacher to confirm they really taught the class. */
+  protected askFinish(c: TodayClass) {
+    if (this.busy()) return;
+    this.message.set(null);
+    this.confirming.set(c);
+    // get the location ready while they read the question
+    if (!this.fix || Date.now() - this.fix.at > 60_000) void this.locate(60_000);
+  }
+
+  protected cancelFinish() {
+    this.confirming.set(null);
+  }
+
+  protected confirmFinish() {
+    const c = this.confirming();
+    this.confirming.set(null);
+    if (c) void this.finish(c);
+  }
+
   /** After the class: confirm it was taught, at the academy, with what was covered. */
-  protected async finish(c: TodayClass) {
+  private async finish(c: TodayClass) {
     if (this.busy()) return;
     this.busy.set(c.slot.id);
     this.message.set(null);
     try {
-      const f = this.fix && Date.now() - this.fix.at < 120_000 ? this.fix : await this.locate();
+      const f = await this.current();
       if (!f) {
         this.message.set({ text: 'Your phone did not share its location. ' + this.whereHelp(), ok: false });
         return;

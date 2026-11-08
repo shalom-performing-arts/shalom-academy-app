@@ -108,7 +108,7 @@
               <textarea rows="2" maxlength="300" placeholder="e.g. Scales in C, 'Twinkle Twinkle' with actions"
                         [value]="notes()[c.slot.id] ?? ''" (input)="setNote(c.slot.id, $any($event.target).value)"></textarea>
             </label>
-            <button type="button" class="ci-btn ci-btn-done" [disabled]="!!busy()" (click)="finish(c)">
+            <button type="button" class="ci-btn ci-btn-done" [disabled]="!!busy()" (click)="askFinish(c)">
               {{ busy() === c.slot.id ? 'Saving…' : '🎉 Class done' }}</button>
             <small class="ci-finish-by">Open until {{ c.doneClosesAt }}</small>
           </div>
@@ -162,3 +162,20 @@
 
   <button type="button" class="ci-signout" (click)="auth.logout()">Sign out</button>
 </section>
+
+<!-- ============ "Class done": are you sure? ============ -->
+@if (confirming(); as c) {
+  <div class="ci-confirm-bg" (click)="cancelFinish()">
+    <div class="ci-confirm" role="alertdialog" aria-modal="true" aria-labelledby="ci-confirm-title"
+         [style.--c]="colour(c.slot.category)" (click)="$event.stopPropagation()">
+      <span class="ci-confirm-icon" aria-hidden="true">🎓</span>
+      <h2 id="ci-confirm-title">Are you sure you participated in this session?</h2>
+      <p class="ci-confirm-class"><b>{{ c.slot.label }}</b><small>Today · {{ c.time }}</small></p>
+      <p class="ci-confirm-text">Please confirm that you were at the academy and taught this class yourself.</p>
+      <div class="ci-confirm-btns">
+        <button type="button" class="ci-confirm-no" (click)="cancelFinish()">No, go back</button>
+        <button type="button" class="ci-btn ci-btn-done" (click)="confirmFinish()">Yes, I taught this class</button>
+      </div>
+    </div>
+  </div>
+}
