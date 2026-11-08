@@ -358,9 +358,29 @@ body{
 /* a teacher's phone: check in, or take the student register */
 .teacher-tabs{position:sticky; top:calc(60px + env(safe-area-inset-top)); z-index:19; display:grid; grid-template-columns:1fr 1fr; gap:6px;
   padding:8px 12px; background:rgba(246,243,249,.92); backdrop-filter:blur(10px); border-bottom:1px solid #ece5f0}
-.teacher-tabs a{display:flex; align-items:center; justify-content:center; min-height:44px; border-radius:14px; text-decoration:none;
+.teacher-tabs a{display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; border-radius:14px; text-decoration:none;
   font-weight:700; font-size:15px; color:#5b4660; background:#fff; border:1px solid #ece5f0}
+.teacher-tabs a i{font-style:normal}
 .teacher-tabs a.is-on{background:linear-gradient(135deg, #3a1238, #74204f); color:#fff; border-color:transparent; box-shadow:0 6px 16px rgba(58,18,56,.25)}
+
+/* sign out in the teacher's header */
+.teacher-bar-name{flex:1; min-width:0}
+.teacher-bar-name small{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.teacher-out{flex:none; display:inline-flex; align-items:center; gap:6px; min-height:40px; padding:0 14px; border-radius:12px; cursor:pointer;
+  border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.1); color:#fff; font:inherit; font-size:13.5px; font-weight:800}
+.teacher-out:active{transform:scale(.96); background:rgba(255,255,255,.2)}
+
+/* on a phone: the tabs become an app-style bar along the bottom */
+@media (max-width:700px){
+  .teacher-tabs{position:fixed; top:auto; bottom:0; left:0; right:0; z-index:30; gap:4px;
+    padding:6px 14px calc(6px + env(safe-area-inset-bottom)); border-bottom:0; border-top:1px solid #ece5f0;
+    background:rgba(255,255,255,.94); box-shadow:0 -8px 24px rgba(58,18,56,.08)}
+  .teacher-tabs a{flex-direction:column; gap:1px; min-height:54px; border:0; background:none; font-size:12px; color:#8a7590; border-radius:14px}
+  .teacher-tabs a i{font-size:21px; line-height:1.1; filter:grayscale(.6); opacity:.75}
+  .teacher-tabs a.is-on{background:#f6eef4; color:#6d1f3e; box-shadow:none}
+  .teacher-tabs a.is-on i{filter:none; opacity:1}
+  .teacher-main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+}
 @media print{ .teacher-bar, .teacher-tabs{display:none !important} }
 
 /* the Registration pool */

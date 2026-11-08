@@ -75,6 +75,29 @@ export class CheckIn {
   });
 
 
+  /** the clock, for "starts in 28 min" (updated every 30 seconds) */
+  private readonly now = signal(Date.now());
+
+  /** what is on now, or next, or that the day is done — shown in the hero */
+  protected readonly nextUp = computed((): { icon: string; text: string; now: boolean } | null => {
+    const m = this.me(), now = this.now();
+    if (!m || !m.today.length || m.holiday?.classOff) return null;
+    const [y, mo, d] = m.date.split('-').map(Number);
+    const at = (hhmm: string) => { const [h, mi] = hhmm.split(':').map(Number); return new Date(y, mo - 1, d, h, mi).getTime(); };
+    const named = (c: TodayClass) => m.classInfo?.[c.slot.id]?.session || c.slot.label;
+    const live = m.today.find(c => c.slot.start && now >= at(c.slot.start) && now < at(c.slot.start) + (c.slot.minutes || 60) * 60_000);
+    if (live) return { icon: '🎵', now: true, text: `${named(live)} is on now — until ${c12(at(live.slot.start) + (live.slot.minutes || 60) * 60_000)}` };
+    const next = m.today.filter(c => c.slot.start && at(c.slot.start) > now).sort((a, b) => at(a.slot.start) - at(b.slot.start))[0];
+    if (next) {
+      const mins = Math.max(1, Math.round((at(next.slot.start) - now) / 60_000));
+      const inText = mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)} h${mins % 60 ? ' ' + (mins % 60) + ' min' : ''}`;
+      return { icon: '⏭', now: false, text: `Next: ${named(next)} at ${c12(at(next.slot.start))} · in ${inText}` };
+    }
+    return this.done() === m.today.length
+      ? { icon: '✨', now: false, text: 'All classes done for today — thank you!' }
+      : { icon: '🌙', now: false, text: 'Today\'s classes are over. Mark any you taught before midnight.' };
+  });
+
   /** the class waiting for the teacher's "are you sure?" */
   protected readonly confirming = signal<TodayClass | null>(null);
 
@@ -86,6 +109,8 @@ export class CheckIn {
     this.watch();
     // class windows open and close through the day
     const t = setInterval(() => this.load(), 60_000);
+    const tick = setInterval(() => this.now.set(Date.now()), 30_000);
+    inject(DestroyRef).onDestroy(() => clearInterval(tick));
     // keep the location fresh only while the page is on screen (saves the battery)
     const onVisible = () => document.hidden ? this.unwatch() : this.watch();
     document.addEventListener('visibilitychange', onVisible);
@@ -291,4 +316,9 @@ function distance(lat1: number, lng1: number, lat2: number, lng2: number): numbe
   const dp = p2 - p1, dl = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
   return 2 * r * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** "4:30 PM" */
+function c12(ms: number): string {
+  return new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }

@@ -281,3 +281,70 @@
 .ci-up-count.full{background:#fdecec; border-color:#f3c0c0; color:#9c1d1d}
 .ci-up-what b{align-items:center}
 .ci-up-what b span:last-child{min-width:0}
+
+/* =========================================================
+   Phone-first polish
+   ========================================================= */
+
+/* the ring fills as the day's classes are marked */
+.ci-hello .ci-ring{--p:0; position:relative; border:0;
+  background:conic-gradient(#ffd1e3 calc(var(--p) * 360deg), rgba(255,255,255,.16) 0)}
+.ci-hello .ci-ring::before{content:""; position:absolute; inset:6px; border-radius:50%;
+  background:linear-gradient(150deg, #3a1450, #6d1f4f)}
+.ci-hello .ci-ring > *{position:relative}
+
+/* on now / next, across the bottom of the hero */
+.ci-nextup{flex:1 1 100%; margin:4px 0 0; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px;
+  background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.16); font-size:14.5px; font-weight:600; line-height:1.35}
+.ci-nextup i{font-style:normal; font-size:18px}
+.ci-nextup.now{background:rgba(255,209,227,.22); border-color:rgba(255,209,227,.45)}
+.ci-nextup.now i{animation:ci-beat 1.6s ease-in-out infinite}
+@keyframes ci-beat{50%{transform:scale(1.2)}}
+
+/* where the phone is, and the holiday: small chips */
+.ci-status{display:flex; flex-wrap:wrap; gap:8px}
+.ci-status:empty{display:none}
+.ci-pill{display:inline-flex; align-items:center; gap:6px; min-height:38px; padding:0 12px; border-radius:999px; font:inherit;
+  font-size:13.5px; font-weight:700; border:1px solid #e6dcea; background:#fff; color:#3a1238; cursor:default}
+button.ci-pill{cursor:pointer}
+button.ci-pill:active{transform:scale(.97)}
+.ci-pill i{font-style:normal}
+.ci-pill small{font-weight:600; font-size:12px; color:var(--muted)}
+.ci-pill em{font-style:normal; font-size:15px; color:var(--muted)}
+.ci-pill.here{background:#e9f8ef; border-color:#c6e9d4; color:#0b6b3f}
+.ci-pill.away{background:#fff6e5; border-color:#f3dca0; color:#7a5200}
+.ci-pill.holiday{background:#fff6e0; border-color:#f3dca0; color:#6b4a00}
+.ci-pill.holiday.off{background:#fdecec; border-color:#f3c0c0; color:#9c1d1d}
+.ci-pill .ci-pulse{width:10px; height:10px}
+
+/* the section heading, with the register beside it */
+.ci-section{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px}
+.ci-section .ci-h2{margin:0; display:flex; align-items:center; gap:8px}
+.ci-count{display:inline-grid; place-items:center; min-width:24px; height:24px; padding:0 7px; border-radius:999px;
+  background:#3a1238; color:#fff; font-family:inherit; font-size:12.5px; font-weight:800; letter-spacing:0}
+.ci-roll-btn{flex:none; display:inline-flex; align-items:center; gap:6px; min-height:40px; padding:0 14px; border-radius:12px;
+  background:#e8f4ff; border:1px solid #c9e2fb; color:#0b4f8a; font-weight:800; font-size:14px; text-decoration:none}
+.ci-roll-btn:active{transform:scale(.97)}
+
+/* cards slide in, one after another; classes not open yet stay compact */
+.ci-card{animation:ci-rise .45s cubic-bezier(.2,.8,.2,1) both; animation-delay:calc(var(--i, 0) * 60ms)}
+@keyframes ci-rise{from{opacity:0; transform:translateY(14px)}}
+.ci-card.st-LATER, .ci-card.st-HOLIDAY{padding-bottom:12px}
+.ci-card.st-LATER .ci-card-title{font-size:18px}
+.ci-card.st-OPEN{outline:2px solid color-mix(in srgb, var(--c) 40%, transparent); outline-offset:2px}
+
+/* phones */
+@media (max-width:480px){
+  .ci{gap:12px}
+  .ci-hello{padding:18px 16px 16px; border-radius:22px}
+  .ci-bigdate-num{font-size:58px}
+  .ci-bigdate-rest b{font-size:26px}
+  .ci-bigdate-rest small{font-size:16px}
+  .ci-card{padding:14px 14px 12px; border-radius:18px}
+  .ci-card-title{font-size:19px}
+  .ci-mark{min-height:56px; font-size:17px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .ci-card, .ci-nextup.now i, .ci-welcome-icon, .ci-confirm, .ci-confirm-bg{animation:none !important}
+}

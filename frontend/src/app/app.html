@@ -86,10 +86,14 @@
     <header class="teacher-bar">
       <span class="side-logo"><img [src]="logo()" alt=""></span>
       <span class="teacher-bar-name"><strong>Shalom Academy</strong><small>{{ auth.teacherName() || 'Teacher' }}</small></span>
+      <!-- always at hand, on every teacher page -->
+      <button type="button" class="teacher-out" (click)="auth.logout()" aria-label="Sign out">
+        <span aria-hidden="true">⎋</span> Sign out</button>
     </header>
+    <!-- on a phone: a tab bar at the bottom, within thumb reach -->
     <nav class="teacher-tabs" aria-label="Teacher">
-      <a routerLink="/checkin" routerLinkActive="is-on">📍 Check in</a>
-      <a routerLink="/roll" routerLinkActive="is-on">✋ Students</a>
+      <a routerLink="/checkin" routerLinkActive="is-on"><i aria-hidden="true">📍</i><span>My day</span></a>
+      <a routerLink="/roll" routerLinkActive="is-on"><i aria-hidden="true">✋</i><span>Students</span></a>
     </nav>
     <main class="teacher-main"><router-outlet /></main>
   </div>
