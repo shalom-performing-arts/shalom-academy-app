@@ -259,6 +259,13 @@ export class Teachers {
     return this.teachers().find(t => t.id === id)?.colour ?? '#8e2b52';
   }
 
+  /** who reported at the academy that day, and when, earliest first */
+  protected arrivals(d: DayOut): { id: string; name: string; colour: string; at: string }[] {
+    return Object.entries(d.arrivals ?? {}).map(([id, at]) => ({
+      id, at, colour: this.teacherColour(id), name: this.teachers().find(t => t.id === id)?.name ?? id,
+    }));
+  }
+
   protected dayTicks(d: DayOut) {
     return d.classes.reduce((n, c) => n + c.teachers.length, 0);
   }

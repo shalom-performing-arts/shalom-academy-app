@@ -12,6 +12,7 @@
       <p class="ci-greet">{{ greeting() }},</p>
       <h1>{{ name() }} <span aria-hidden="true">👋</span></h1>
       <p class="ci-date">{{ me()?.dateLabel }}</p>
+      @if (me()?.arrivedAt; as at) { <p class="ci-reported">📍 Reported at the academy · <b>{{ time(at) }}</b></p> }
     </div>
     @if (me(); as m) {
       <div class="ci-ring" [title]="done() + ' of ' + m.today.length + ' classes done today'">
@@ -181,6 +182,22 @@
 
   <button type="button" class="ci-signout" (click)="auth.logout()">Sign out</button>
 </section>
+
+<!-- ============ first time at the academy today: thank you ============ -->
+@if (welcome(); as at) {
+  <div class="ci-confirm-bg" (click)="closeWelcome()">
+    <div class="ci-confirm ci-welcome" role="alertdialog" aria-modal="true" aria-labelledby="ci-welcome-title"
+         (click)="$event.stopPropagation()">
+      <span class="ci-welcome-icon" aria-hidden="true">🎶</span>
+      <h2 id="ci-welcome-title">Welcome to the academy, {{ name() }}!</h2>
+      <p class="ci-welcome-time"><small>You reported for work at</small><b>{{ at }}</b><small>{{ me()?.dateLabel }}</small></p>
+      <p class="ci-confirm-text">Thank you for coming in today. Have a wonderful class! 🌷</p>
+      <div class="ci-confirm-btns">
+        <button type="button" class="ci-btn ci-btn-done" (click)="closeWelcome()">Thank you</button>
+      </div>
+    </div>
+  </div>
+}
 
 <!-- ============ "Mark attended": are you sure? ============ -->
 @if (confirming(); as c) {

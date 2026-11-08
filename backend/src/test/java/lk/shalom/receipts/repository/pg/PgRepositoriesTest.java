@@ -280,6 +280,15 @@ class PgRepositoriesTest {
         });
         assertThat(repos().teachers().get().attendance()).hasSize(1);
         assertThat(repos().teachers().get().rates()).isEqualTo(t.rates());
+
+        // and the time a teacher reported at the academy
+        pg.teachers().update(b -> {
+            b.arrivals().add(new lk.shalom.receipts.model.TeacherBook.Arrival("2026-11-04", b.teachers().getFirst().id(),
+                    Instant.parse("2026-11-04T09:42:00Z"), 6.9271, 79.8612, 12.0, 8.0));
+            return b;
+        });
+        assertThat(repos().teachers().get().arrivals()).singleElement()
+                .satisfies(a -> assertThat(a.at()).isEqualTo(Instant.parse("2026-11-04T09:42:00Z")));
     }
 
     /* ---------------- comparing ---------------- */

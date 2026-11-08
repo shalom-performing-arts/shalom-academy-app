@@ -61,6 +61,12 @@ public class MeController {
         return withInfo(service.checkIn(teacher(request), in));
     }
 
+    /** The app was opened at the academy: the first time today is the teacher's reported time. */
+    @PostMapping("/arrive")
+    public MeOut arrive(@RequestBody TeacherService.Arrive in, HttpServletRequest request) {
+        return withInfo(service.arrive(teacher(request), in));
+    }
+
     /** Takes back the teacher's own mark for one of today's classes. */
     @PostMapping("/unmark")
     public MeOut unmark(@RequestBody TeacherService.Unmark in, HttpServletRequest request) {

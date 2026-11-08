@@ -2,6 +2,7 @@ package lk.shalom.receipts.service;
 
 import lk.shalom.receipts.model.TeacherBook;
 import lk.shalom.receipts.model.TeacherBook.Adjustment;
+import lk.shalom.receipts.model.TeacherBook.Arrival;
 import lk.shalom.receipts.model.TeacherBook.Holiday;
 import lk.shalom.receipts.model.TeacherBook.Mark;
 import lk.shalom.receipts.model.TeacherBook.Payout;
@@ -122,8 +123,9 @@ public class TeacherService {
 
     public record ClassOut(Slot slot, String time, List<Who> teachers, boolean removed) {}
 
+    /** @param arrivals when each teacher reported at the academy that day, by teacher id */
     public record DayOut(String date, String dayName, String label, boolean weekend, boolean today,
-                         boolean future, Holiday holiday, List<ClassOut> classes) {}
+                         boolean future, Holiday holiday, List<ClassOut> classes, Map<String, Instant> arrivals) {}
 
     public record SheetOut(String period, String label, String from, String to, String payDate,
                            List<TeacherOut> teachers, List<DayOut> days, SalaryOut salary) {}
@@ -150,8 +152,11 @@ public class TeacherService {
                         .orElse(new Slot(gone, dayName(d), "", 60, "", "Removed class"));
                 classes.add(new ClassOut(s, timeRange(s), who(marks, gone), true));
             }
-            if (classes.isEmpty() && h == null) continue;
-            days.add(new DayOut(iso, dayName(d), d.format(SHORT), weekend(d), d.equals(today), d.isAfter(today), h, classes));
+            Map<String, Instant> arrived = new LinkedHashMap<>();
+            b.arrivals().stream().filter(a -> a.date().equals(iso)).sorted(Comparator.comparing(Arrival::at))
+                    .forEach(a -> arrived.put(a.teacherId(), a.at()));
+            if (classes.isEmpty() && h == null && arrived.isEmpty()) continue;
+            days.add(new DayOut(iso, dayName(d), d.format(SHORT), weekend(d), d.equals(today), d.isAfter(today), h, classes, arrived));
         }
         return new SheetOut(period, "Salary " + periodEnd(period).format(LABEL), from.toString(), to.toString(),
                 periodEnd(period).toString(), teachersOut(b), days, salary(b, period));
@@ -365,12 +370,12 @@ public class TeacherService {
     public record MeOut(TeacherOut teacher, String date, String dateLabel, Holiday holiday, boolean siteSet,
                         Integer radius, Double siteLat, Double siteLng, List<TodayClass> today, PayLine pay,
                         String period, String periodLabel, List<UpcomingDay> next,
-                        Map<String, RollService.ClassInfo> classInfo) {
+                        Map<String, RollService.ClassInfo> classInfo, Instant arrivedAt) {
 
         /** the student session behind each slot (by slot id), from {@link RollService#classInfo} */
         public MeOut withClassInfo(Map<String, RollService.ClassInfo> info) {
             return new MeOut(teacher, date, dateLabel, holiday, siteSet, radius, siteLat, siteLng, today, pay,
-                    period, periodLabel, next, info);
+                    period, periodLabel, next, info, arrivedAt);
         }
 
         /** every slot on the page: today's and the coming days' */
@@ -436,7 +441,9 @@ public class TeacherService {
         }
         return new MeOut(out(t), d.toString(), dayName(d) + ", " + d.format(LABEL), h, site.isSet(), site.radiusM(),
                 site.lat(), site.lng(), classes, pay, period, "Salary " + periodEnd(period).format(LABEL) + " · " + periodStart(period).format(SHORT)
-                + " – " + periodEnd(period).format(SHORT), next, Map.of());
+                + " – " + periodEnd(period).format(SHORT), next, Map.of(),
+                b.arrivals().stream().filter(a -> a.date().equals(d.toString()) && a.teacherId().equals(teacherId))
+                        .map(Arrival::at).findFirst().orElse(null));
     }
 
     public record CheckIn(String slotId, Double lat, Double lng, Double accuracy) {}
@@ -481,6 +488,33 @@ public class TeacherService {
             }
             return x;
         });
+        return me(teacherId);
+    }
+
+    public record Arrive(Double lat, Double lng, Double accuracy) {}
+
+    /**
+     * The teacher opened the app at the academy: the first time today is kept as their reported
+     * time (server clock). Later calls the same day change nothing.
+     */
+    public MeOut arrive(String teacherId, Arrive in) {
+        teacher(teacherId);
+        TeacherBook b = repo.get();
+        Site site = b.site();
+        if (!site.isSet()) throw ApiException.badRequest("The academy's location has not been set yet.");
+        if (in == null) throw ApiException.badRequest("Nothing was sent.");
+        double dist = atAcademy(site, in.lat(), in.lng(), in.accuracy(), "Your arrival is noted once you are at the academy");
+        String d = today().toString();
+        if (b.arrivals().stream().noneMatch(a -> a.date().equals(d) && a.teacherId().equals(teacherId))) {
+            Instant when = Instant.now(clock);
+            repo.update(x -> {
+                if (x.arrivals().stream().noneMatch(a -> a.date().equals(d) && a.teacherId().equals(teacherId))) {
+                    x.arrivals().add(new Arrival(d, teacherId, when, round(in.lat(), 6), round(in.lng(), 6),
+                            round(in.accuracy() == null ? 0 : in.accuracy(), 0), round(dist, 0)));
+                }
+                return x;
+            });
+        }
         return me(teacherId);
     }
 
@@ -683,7 +717,7 @@ public class TeacherService {
                 schedule == null ? b.schedule() : schedule,
                 holidays == null ? b.holidays() : holidays,
                 in.site() == null ? b.site() : in.site(),
-                b.attendance(), b.adjustments(), b.payouts()));
+                b.attendance(), b.adjustments(), b.payouts(), b.arrivals()));
         return setup();
     }
 

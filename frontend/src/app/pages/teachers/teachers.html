@@ -81,6 +81,11 @@
           @if (d.holiday; as h) {
             <p class="tw-hol" [class.off]="h.classOff">{{ h.classOff ? '🚫' : '🌕' }} {{ h.name }}{{ h.classOff ? ' — no class' : '' }}</p>
           }
+          @if (arrivals(d).length) {
+            <p class="tc-arrivals" title="When each teacher first opened the app at the academy">📍
+              @for (a of arrivals(d); track a.id) { <span [style.--t]="a.colour">{{ a.name }} <b>{{ time(a.at) }}</b></span> }
+            </p>
+          }
           @for (c of d.classes; track c.slot.id) {
             <div class="tw-class" [style.--c]="colour(c.slot.category)">
               <div class="tw-info">
@@ -204,6 +209,11 @@
               <span class="tc-hol" [class.off]="h.classOff">{{ h.classOff ? '🚫' : '🌕' }} {{ h.name }}{{ h.classOff ? ' — no class' : '' }}</span>
             }
           </header>
+          @if (arrivals(d).length) {
+            <p class="tc-arrivals" title="When each teacher first opened the app at the academy">📍 Reported:
+              @for (a of arrivals(d); track a.id) { <span [style.--t]="a.colour">{{ a.name }} <b>{{ time(a.at) }}</b></span> }
+            </p>
+          }
           <div class="tc-classes">
             @for (c of d.classes; track c.slot.id) {
               <div class="tc-class" [style.--c]="colour(c.slot.category)" [class.removed]="c.removed">

@@ -2,6 +2,7 @@ package lk.shalom.receipts.repository.pg;
 
 import lk.shalom.receipts.model.TeacherBook;
 import lk.shalom.receipts.model.TeacherBook.Adjustment;
+import lk.shalom.receipts.model.TeacherBook.Arrival;
 import lk.shalom.receipts.model.TeacherBook.Holiday;
 import lk.shalom.receipts.model.TeacherBook.Mark;
 import lk.shalom.receipts.model.TeacherBook.Payout;
@@ -44,7 +45,7 @@ public class PgTeacherRepository implements TeacherRepository {
         TeacherBook now = get();
         TeacherBook before = new TeacherBook(List.copyOf(now.teachers()), now.rates(), List.copyOf(now.schedule()),
                 List.copyOf(now.holidays()), now.site(), List.copyOf(now.attendance()), List.copyOf(now.adjustments()),
-                List.copyOf(now.payouts()));
+                List.copyOf(now.payouts()), List.copyOf(now.arrivals()));
         TeacherBook after = change.apply(now).clean();
         try {
             db.inTx(() -> write(before, after));
@@ -89,8 +90,12 @@ public class PgTeacherRepository implements TeacherRepository {
                 new Adjustment(rs.getString("period"), rs.getString("teacher_id"), Db.money(rs, "amount"), rs.getString("note"))));
         b.payouts().addAll(db.jdbc.query("select * from salary_payouts order by position", (rs, n) ->
                 new Payout(rs.getString("period"), rs.getString("teacher_id"), Db.money(rs, "amount"), Db.instant(rs, "paid_at"))));
+        b.arrivals().addAll(db.jdbc.query("""
+                select date::text as d, teacher_id, at, lat, lng, accuracy, distance from teacher_arrivals order by date, at""",
+                (rs, n) -> new Arrival(rs.getString("d"), rs.getString("teacher_id"), Db.instant(rs, "at"), Db.dbl(rs, "lat"),
+                        Db.dbl(rs, "lng"), Db.dbl(rs, "accuracy"), Db.dbl(rs, "distance"))));
         return new TeacherBook(b.teachers(), rates, b.schedule(), b.holidays(), site, b.attendance(), b.adjustments(),
-                b.payouts()).clean();
+                b.payouts(), b.arrivals()).clean();
     }
 
     /* ---------------- writing ---------------- */
@@ -100,6 +105,8 @@ public class PgTeacherRepository implements TeacherRepository {
     private record PeriodKey(String period, String teacherId) {}
 
     private record HolidayKey(String date, String name) {}
+
+    private record ArrivalKey(String date, String teacherId) {}
 
     /**
      * Rows that depend on a teacher are removed before the teacher, and written after them, so a
@@ -113,6 +120,8 @@ public class PgTeacherRepository implements TeacherRepository {
                 x -> new PeriodKey(x.period(), x.teacherId()), true);
         Db.Changes<Payout, PeriodKey> p = Db.diff(before.payouts(), after.payouts(),
                 x -> new PeriodKey(x.period(), x.teacherId()), true);
+        Db.Changes<Arrival, ArrivalKey> v = Db.diff(before.arrivals(), after.arrivals(),
+                x -> new ArrivalKey(x.date(), x.teacherId()), false);
 
         // 1. what leaves, children first
         for (MarkKey k : m.deletes()) {
@@ -121,6 +130,7 @@ public class PgTeacherRepository implements TeacherRepository {
         }
         for (PeriodKey k : a.deletes()) db.jdbc.update("delete from salary_adjustments where period = ? and teacher_id = ?", k.period(), k.teacherId());
         for (PeriodKey k : p.deletes()) db.jdbc.update("delete from salary_payouts where period = ? and teacher_id = ?", k.period(), k.teacherId());
+        for (ArrivalKey k : v.deletes()) db.jdbc.update("delete from teacher_arrivals where date = ?::date and teacher_id = ?", k.date(), k.teacherId());
 
         // 2. teachers, then what hangs off them
         for (Db.At<Teacher> at : t.upserts()) {
@@ -157,6 +167,15 @@ public class PgTeacherRepository implements TeacherRepository {
                     insert into salary_payouts (period, teacher_id, position, amount, paid_at) values (?, ?, ?, ?, ?)
                     on conflict (period, teacher_id) do update set position = excluded.position, amount = excluded.amount,
                         paid_at = excluded.paid_at""", x.period(), x.teacherId(), at.position(), x.amount(), Db.ts(x.paidAt()));
+        }
+
+        for (Db.At<Arrival> at : v.upserts()) {
+            Arrival x = at.item();
+            db.jdbc.update("""
+                    insert into teacher_arrivals (date, teacher_id, at, lat, lng, accuracy, distance) values (?::date, ?, ?, ?, ?, ?, ?)
+                    on conflict (date, teacher_id) do update set at = excluded.at, lat = excluded.lat, lng = excluded.lng,
+                        accuracy = excluded.accuracy, distance = excluded.distance""",
+                    x.date(), x.teacherId(), Db.ts(x.at()), x.lat(), x.lng(), x.accuracy(), x.distance());
         }
 
         // 3. teachers who left

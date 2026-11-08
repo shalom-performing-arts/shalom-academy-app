@@ -77,6 +77,8 @@ export interface DayOut {
   future: boolean;
   holiday: Holiday | null;
   classes: ClassOut[];
+  /** when each teacher reported at the academy that day (teacher id → time) */
+  arrivals?: Record<string, string>;
 }
 
 export interface PayLine {
@@ -170,6 +172,8 @@ export interface MeOut {
   next: { date: string; label: string; classes: string[]; slots?: { slot: Slot; time: string }[] }[];
   /** the student session behind each slot, by slot id (slots with no matching session are missing) */
   classInfo?: Record<string, ClassInfo>;
+  /** when the teacher first opened the app at the academy today (their reported time) */
+  arrivedAt?: string | null;
 }
 
 /** A class as teachers know it: "Forte" · Dynamics · "loud and strong" · f · 6 of 8 students */
@@ -243,6 +247,11 @@ export class TeacherApi {
   /** marks one of today's classes as taught (after the teacher confirms) */
   checkIn(slotId: string, lat: number, lng: number, accuracy: number) {
     return firstValueFrom(this.http.post<MeOut>('/api/me/checkin', { slotId, lat, lng, accuracy }));
+  }
+
+  /** the phone is at the academy: the first time today becomes the teacher's reported time */
+  arrive(lat: number, lng: number, accuracy: number) {
+    return firstValueFrom(this.http.post<MeOut>('/api/me/arrive', { lat, lng, accuracy }));
   }
 
   /** takes back the teacher's own mark for one of today's classes */

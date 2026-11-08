@@ -24,7 +24,8 @@ public record TeacherBook(
         Site site,
         List<Mark> attendance,
         List<Adjustment> adjustments,
-        List<Payout> payouts
+        List<Payout> payouts,
+        List<Arrival> arrivals
 ) {
 
     /**
@@ -130,9 +131,16 @@ public record TeacherBook(
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Payout(String period, String teacherId, BigDecimal amount, Instant paidAt) {}
 
+    /**
+     * When a teacher first opened the app at the academy that day: their reported time.
+     * One per teacher per day; taken from the server clock, with where the phone was.
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Arrival(String date, String teacherId, Instant at, Double lat, Double lng, Double accuracy, Double distance) {}
+
     public static TeacherBook empty() {
         return new TeacherBook(new ArrayList<>(), Rates.defaults(), new ArrayList<>(), new ArrayList<>(),
-                Site.defaults(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+                Site.defaults(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     }
 
     /** Lists never null and settings filled, whatever an older file left out. */
@@ -142,7 +150,7 @@ public record TeacherBook(
                 nz(rates.transport(), Rates.defaults().transport()), rates.minClasses());
         Site s = site == null ? Site.defaults() : new Site(site.lat(), site.lng(), site.radiusM(), site.early(), site.late(), site.done());
         return new TeacherBook(list(teachers), r, list(schedule), list(holidays), s, list(attendance),
-                list(adjustments), list(payouts));
+                list(adjustments), list(payouts), list(arrivals));
     }
 
     private static <T> List<T> list(List<T> in) {

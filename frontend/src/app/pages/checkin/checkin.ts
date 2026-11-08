@@ -149,6 +149,42 @@ export class CheckIn {
     const metres = distance(f.lat, f.lng, me.siteLat, me.siteLng);
     const near = metres <= me.radius + Math.min(f.accuracy, 75);
     this.where.set({ kind: near ? 'here' : 'away', metres, accuracy: f.accuracy });
+    if (near) void this.report(f);
+  }
+
+  /* ---------------- reported at the academy ---------------- */
+
+  /** the "you reported at …" pop-up, with the time */
+  protected readonly welcome = signal<string | null>(null);
+  private reporting = false;
+  private reportTriedAt = 0;
+
+  /**
+   * The first time today the phone is at the academy, the server notes the time (its own clock)
+   * as the teacher's reported time, and a thank-you pop-up shows it. Once a day; a failed try is
+   * repeated at most every 30 seconds while the page is open.
+   */
+  private async report(f: Fix) {
+    const me = this.me();
+    if (!me || me.arrivedAt || this.reporting || Date.now() - this.reportTriedAt < 30_000) return;
+    this.reporting = true;
+    this.reportTriedAt = Date.now();
+    try {
+      const after = await this.api.arrive(f.lat, f.lng, f.accuracy);
+      this.me.set(after);
+      if (after.arrivedAt) {
+        this.welcome.set(this.time(after.arrivedAt));
+        navigator.vibrate?.([60, 80, 60]);
+      }
+    } catch {
+      /* not close enough yet, or no signal: tried again on a later reading */
+    } finally {
+      this.reporting = false;
+    }
+  }
+
+  protected closeWelcome() {
+    this.welcome.set(null);
   }
 
   /* ---------------- mark a class ---------------- */

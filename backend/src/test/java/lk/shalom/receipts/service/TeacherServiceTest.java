@@ -139,6 +139,27 @@ class TeacherServiceTest {
         assertThat(line(s, "ijini").paidAmount()).isEqualByComparingTo("6400");
     }
 
+    @Test
+    void theFirstOpeningAtTheAcademyEachDayIsTheTeachersReportedTime() {
+        TeacherService first = at("2026-11-04T15:12");
+        first.saveSetup(new TeacherService.SetupInput(null, null, null, new Site(LAT, LNG, 150, 45, 15)));
+        assertThat(first.me("ijini").arrivedAt()).isNull();
+        // away from the academy: nothing is noted
+        assertThatThrownBy(() -> first.arrive("ijini", new TeacherService.Arrive(6.95, 79.86, 20.0)))
+                .hasMessageContaining("km from the academy");
+        assertThat(first.me("ijini").arrivedAt()).isNull();
+
+        var me = first.arrive("ijini", new TeacherService.Arrive(LAT, LNG, 12.0));
+        java.time.Instant reported = LocalDateTime.parse("2026-11-04T15:12").atZone(SL).toInstant();
+        assertThat(me.arrivedAt()).isEqualTo(reported);
+        // opening the app again later the same day keeps the first time
+        assertThat(at("2026-11-04T17:40").arrive("ijini", new TeacherService.Arrive(LAT, LNG, 12.0)).arrivedAt()).isEqualTo(reported);
+        // the office sees it on that day of the sheet; the next day starts afresh
+        var day = first.sheet("2026-11").days().stream().filter(d -> d.date().equals("2026-11-04")).findFirst().orElseThrow();
+        assertThat(day.arrivals()).containsEntry("ijini", reported);
+        assertThat(at("2026-11-05T09:00").me("ijini").arrivedAt()).isNull();
+    }
+
     private static TeacherService.TodayClass today(TeacherService s, String slot) {
         return s.me("ijini").today().stream().filter(c -> c.slot().id().equals(slot)).findFirst().orElseThrow();
     }
