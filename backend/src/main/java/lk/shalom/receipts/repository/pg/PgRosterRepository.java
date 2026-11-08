@@ -31,6 +31,14 @@ public class PgRosterRepository extends AbstractRosterRepository {
 
     private final Db db;
 
+    /**
+     * The roster as last read or written, kept in memory: nearly every page needs it, and reading
+     * it from the database costs four round trips. Safe because only this app writes the tables
+     * and Cloud Run runs exactly one copy of it (max-instances 1). Handed out as a copy, since the
+     * roster logic edits what it is given.
+     */
+    private String cached;
+
     public PgRosterRepository(Db db) {
         this.db = db;
     }
@@ -38,7 +46,12 @@ public class PgRosterRepository extends AbstractRosterRepository {
     /* ---------------- tables → the roster ---------------- */
 
     @Override
-    protected Map<String, Object> readRaw() {
+    protected synchronized Map<String, Object> readRaw() {
+        if (cached == null) cached = db.toJson(loadRaw());
+        return db.jsonMap(cached);
+    }
+
+    private Map<String, Object> loadRaw() {
         Map<String, List<Map<String, Object>>> changes = new LinkedHashMap<>();
         db.jdbc.query("select category, from_month, fee from category_fee_changes order by category, from_month", rs -> {
             Map<String, Object> c = new LinkedHashMap<>();
@@ -116,7 +129,9 @@ public class PgRosterRepository extends AbstractRosterRepository {
      * (a new name in, the old one out) never leaves a student pointing nowhere.
      */
     @Override
-    protected void writeRaw(Map<String, Object> raw) {
+    protected synchronized void writeRaw(Map<String, Object> raw) {
+        // read back fresh after any change (or a failed one), so the copy in memory never drifts
+        cached = null;
         // Everything goes in a handful of batches rather than one statement per row: the database
         // may be a network hop away (Neon), and 200 single round trips made saving a student slow.
         db.inTx(() -> {
