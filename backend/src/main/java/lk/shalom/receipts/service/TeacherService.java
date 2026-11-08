@@ -371,7 +371,6 @@ public class TeacherService {
         LocalDateTime now = LocalDateTime.now(clock.withZone(SRI_LANKA));
         Holiday h = holiday(b, d.toString());
         Site site = b.site();
-        boolean paidAlready = b.payouts().stream().anyMatch(p -> p.period().equals(periodOf(d)) && p.teacherId().equals(teacherId));
         List<TodayClass> classes = new ArrayList<>();
         for (Slot s : slotsOn(b, d)) {
             Mark mine = b.attendance().stream().filter(m -> m.date().equals(d.toString()) && m.slotId().equals(s.id())
@@ -398,10 +397,9 @@ public class TeacherService {
                     doneOpens == null ? "" : clock12(doneOpens.toLocalTime()),
                     doneCloses == null ? "" : clock12(doneCloses.toLocalTime()),
                     mine == null ? null : mine.doneAt(), mine == null ? null : mine.note(),
-                    mine != null && SELF.equals(mine.method()) && !paidAlready,
+                    mine != null && SELF.equals(mine.method()),
                     // why a mark cannot be taken back here, so the page says so instead of a button that fails
-                    mine == null ? null : !SELF.equals(mine.method()) ? "Marked by the office"
-                            : paidAlready ? "This pay period is marked paid — ask the office to change it" : null));
+                    mine != null && !SELF.equals(mine.method()) ? "Marked by the office" : null));
         }
         String period = periodOf(d);
         PayLine pay = salary(b, period).lines().stream().filter(l -> l.teacherId().equals(teacherId)).findFirst().orElse(null);
@@ -479,10 +477,6 @@ public class TeacherService {
         if (mine == null) return me(teacherId);
         if (!SELF.equals(mine.method())) {
             throw ApiException.badRequest("The office marked this class for you. Please ask the office to change it.");
-        }
-        String period = periodOf(d);
-        if (b.payouts().stream().anyMatch(p -> p.period().equals(period) && p.teacherId().equals(teacherId))) {
-            throw ApiException.badRequest("This pay period has already been paid. Please ask the office to change it.");
         }
         repo.update(x -> {
             x.attendance().removeIf(m -> m.date().equals(d.toString()) && m.slotId().equals(in.slotId())

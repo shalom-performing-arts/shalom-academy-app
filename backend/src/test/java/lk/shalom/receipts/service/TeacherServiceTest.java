@@ -124,12 +124,11 @@ class TeacherServiceTest {
         assertThat(today(s, "wed-1700-junior").undoBlocked()).contains("office");
         assertThatThrownBy(() -> s.unmark("ijini", new Unmark("wed-1700-junior")))
                 .hasMessageContaining("office marked");
-        // once the period is paid, changes go through the office (and the page says so)
+        // a period marked paid does not stop the teacher taking back today's mark
         s.setPaid("2026-11", "ijini", true);
-        assertThat(today(s, "wed-1530-kids").canUndo()).isFalse();
-        assertThat(today(s, "wed-1530-kids").undoBlocked()).contains("paid");
-        assertThatThrownBy(() -> s.unmark("ijini", new Unmark("wed-1530-kids")))
-                .hasMessageContaining("already been paid");
+        assertThat(today(s, "wed-1530-kids").canUndo()).isTrue();
+        s.unmark("ijini", new Unmark("wed-1530-kids"));
+        assertThat(state(s, "wed-1530-kids")).isEqualTo(SlotState.OPEN);
     }
 
     private static TeacherService.TodayClass today(TeacherService s, String slot) {
