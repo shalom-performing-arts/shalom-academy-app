@@ -103,4 +103,29 @@
   </main>
 }
 
-<div class="toast" [hidden]="!toast.message()" role="status">{{ toast.message() }}</div>
+<!-- a message: done / a problem / a note -->
+@if (toast.current(); as t) {
+  <div class="note-box" [class]="'note-box is-' + t.kind" [attr.role]="t.kind === 'error' ? 'alert' : 'status'">
+    <span class="note-ico" aria-hidden="true">{{ t.kind === 'error' ? '!' : t.kind === 'success' ? '✓' : 'i' }}</span>
+    <div class="note-text">
+      @if (t.kind === 'error') { <b>{{ t.title }}</b> }
+      <span>{{ t.text }}</span>
+    </div>
+    <button type="button" class="note-close" (click)="toast.close()" aria-label="Close">✕</button>
+  </div>
+}
+
+<!-- "are you sure?" -->
+@if (dialog.open(); as d) {
+  <div class="ask-bg" (click)="d.resolve(false)"></div>
+  <div class="ask" [class.danger]="d.danger" role="alertdialog" aria-modal="true" aria-labelledby="ask-title"
+       (keydown.escape)="d.resolve(false)">
+    <span class="ask-ico" aria-hidden="true">{{ d.danger ? '⚠' : '?' }}</span>
+    <h2 id="ask-title">{{ d.title }}</h2>
+    @for (l of d.lines; track $index) { <p>{{ l }}</p> }
+    <div class="ask-btns">
+      <button type="button" class="ask-no" (click)="d.resolve(false)">{{ d.cancel }}</button>
+      <button type="button" class="ask-yes" (click)="d.resolve(true)" autofocus>{{ d.ok }}</button>
+    </div>
+  </div>
+}

@@ -1,4 +1,5 @@
-import { Component, input, output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
+import { Dialog } from '../core/dialog';
 
 /**
  * Edits a short list of names: rename in place, reorder, remove, add. Used for the Paid-to
@@ -25,6 +26,7 @@ import { Component, input, output } from '@angular/core';
   `,
 })
 export class ListEditor {
+  private dialog = inject(Dialog);
   readonly items = input.required<string[]>();
   readonly noun = input('Item');
   readonly placeholder = input('Add another');
@@ -50,8 +52,8 @@ export class ListEditor {
     this.emit(list);
   }
 
-  protected remove(i: number) {
-    if (!confirm(`Remove “${this.items()[i]}”?\n\nAnything already recorded with it keeps it.`)) return;
+  protected async remove(i: number) {
+    if (!await this.dialog.confirm(`Remove “${this.items()[i]}”?\n\nAnything already recorded with it keeps it.`)) return;
     this.emit(this.items().filter((_, j) => j !== i));
   }
 

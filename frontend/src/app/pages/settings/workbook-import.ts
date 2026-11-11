@@ -3,6 +3,7 @@ import { Api, WorkbookPreview, errorMessage } from '../../core/api';
 import { Store } from '../../core/store';
 import { Toast } from '../../core/toast';
 import { money } from '../../receipt/format';
+import { Dialog } from '../../core/dialog';
 
 /**
  * Settings → bring in the office's monthly fee workbook. Three steps, nothing saved until the
@@ -164,6 +165,7 @@ import { money } from '../../receipt/format';
 })
 export class WorkbookImport {
   private api = inject(Api);
+  private dialog = inject(Dialog);
   private store = inject(Store);
   private toast = inject(Toast);
   protected readonly money = money;
@@ -185,7 +187,7 @@ export class WorkbookImport {
     try {
       this.preview.set(await this.api.importWorkbook(f, false));
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not read that workbook.'));
+      this.toast.error(errorMessage(e, 'Could not read that workbook.'));
     } finally {
       this.busy.set('');
     }
@@ -197,7 +199,7 @@ export class WorkbookImport {
       await this.api.downloadBackup();
       this.backedUp.set(true);
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not download the backup.'));
+      this.toast.error(errorMessage(e, 'Could not download the backup.'));
     } finally {
       this.busy.set('');
     }
@@ -206,7 +208,7 @@ export class WorkbookImport {
   protected async apply() {
     const f = this.file(), p = this.preview();
     if (!f || !p || !this.backedUp()) return;
-    const sure = confirm(`Import the ${p.monthLabel} workbook?\n\n` +
+    const sure = await this.dialog.confirm(`Import the ${p.monthLabel} workbook?\n\n` +
       `• ${p.active} active students (${p.added.length} added, ${p.inactivated.length} switched off)\n` +
       `• ${p.monthLabel} payments replaced: ${p.paymentsAdded.count} payments, Rs. ${money(p.paymentsAdded.amount)}\n` +
       `• ${p.receiptsRemoved.length} ${p.monthLabel} receipts removed\n\n` +
@@ -218,7 +220,7 @@ export class WorkbookImport {
       await this.store.load();
       this.toast.show(`${p.monthLabel} workbook imported.`);
     } catch (e) {
-      this.toast.show(errorMessage(e, 'The import did not finish. Restore the backup if anything looks wrong.'));
+      this.toast.error(errorMessage(e, 'The import did not finish. Restore the backup if anything looks wrong.'));
     } finally {
       this.busy.set('');
     }

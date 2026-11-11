@@ -7,6 +7,7 @@ import {
 } from '../../core/teachers';
 import { Toast } from '../../core/toast';
 import { money } from '../../receipt/format';
+import { Dialog } from '../../core/dialog';
 
 type Tab = 'attendance' | 'salary' | 'setup';
 
@@ -28,6 +29,7 @@ const TEACHER_COLOURS = ['#e8457c', '#3567e8', '#0f9f6e', '#7c3aed', '#e07a10', 
 })
 export class Teachers {
   private api = inject(TeacherApi);
+  private dialog = inject(Dialog);
   private toast = inject(Toast);
   private host = inject(ElementRef<HTMLElement>);
   private injector = inject(Injector);
@@ -168,7 +170,7 @@ export class Teachers {
       this.period.set(s.period);
       if (!period) afterNextRender(() => this.scrollToToday(), { injector: this.injector });
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not load the attendance.'));
+      this.toast.error(errorMessage(e, 'Could not load the attendance.'));
     } finally {
       this.loading.set(false);
     }
@@ -202,23 +204,24 @@ export class Teachers {
     let on = !was;
     if (was?.method === 'self' && !was.finished) {
       // checked in but never marked done: the office can confirm the class was taught, or remove it
-      if (confirm(`${t.name} checked in for ${c.slot.label} at ${this.time(was.at)} but has not marked it done.\n\n`
-        + `OK — confirm the class was taught.\nCancel — leave it, or remove it next.`)) {
+      if (await this.dialog.confirm(`Was ${c.slot.label} taught by ${t.name}?\n\n`
+        + `${t.name} checked in at ${this.time(was.at)} but has not marked it done.`,
+        { ok: 'Yes, it was taught', cancel: 'No' })) {
         on = true;
-      } else if (confirm(`Remove ${t.name}'s check-in for ${c.slot.label}? They will not be paid for it.`)) {
+      } else if (await this.dialog.confirm(`Remove ${t.name}'s check-in for ${c.slot.label}? They will not be paid for it.`)) {
         on = false;
       } else {
         return;
       }
-    } else if (was?.method === 'self' && !confirm(`${t.name} checked in for ${c.slot.label} at ${this.time(was.at)}`
-      + ` and marked it done at ${this.time(was.doneAt)}.\n\nRemove it anyway?`)) {
+    } else if (was?.method === 'self' && !await this.dialog.confirm(`Remove ${t.name}'s class anyway?\n\n${t.name} checked in for ${c.slot.label} at ${this.time(was.at)}`
+      + ` and marked it done at ${this.time(was.doneAt)}.`)) {
       return;
     }
     this.saving.set(key);
     try {
       this.sheet.set(await this.api.mark(d.date, c.slot.id, t.id, on));
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not save that.'));
+      this.toast.error(errorMessage(e, 'Could not save that.'));
     } finally {
       this.saving.set('');
     }
@@ -280,7 +283,7 @@ export class Teachers {
   }
 
   protected async setPaid(l: PayLine, paid: boolean) {
-    if (!paid && !confirm(`Mark ${l.name}'s salary as not paid?`)) return;
+    if (!paid && !await this.dialog.confirm(`Mark ${l.name}'s salary as not paid?`)) return;
     await this.saveSalary(() => this.api.paid(this.period(), l.teacherId, paid),
       paid ? `${l.name}'s salary marked as paid.` : `${l.name}'s salary marked as not paid.`);
   }
@@ -291,7 +294,7 @@ export class Teachers {
       this.sheet.update(s => s ? { ...s, salary } : s);
       this.toast.show(done);
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not save that.'));
+      this.toast.error(errorMessage(e, 'Could not save that.'));
     }
   }
 
@@ -299,7 +302,7 @@ export class Teachers {
     try {
       await this.api.downloadSalary(this.period());
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not export.'));
+      this.toast.error(errorMessage(e, 'Could not export.'));
     }
   }
 
@@ -309,7 +312,7 @@ export class Teachers {
     try {
       this.setup.set(await this.api.setup());
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not load the setup.'));
+      this.toast.error(errorMessage(e, 'Could not load the setup.'));
     }
   }
 
@@ -326,7 +329,7 @@ export class Teachers {
       this.toast.show({ rates: 'Rates saved.', schedule: 'Timetable saved.', holidays: 'Holidays saved.', site: 'Academy location saved.' }[part]);
       this.load(this.period());
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not save.'));
+      this.toast.error(errorMessage(e, 'Could not save.'));
     } finally {
       this.saving.set('');
     }
@@ -359,32 +362,32 @@ export class Teachers {
       this.load(this.period());
       this.toast.show(e.id ? `${t.name} saved.` : `${t.name} added. Give them a PIN so they can check in.`);
     } catch (err) {
-      this.toast.show(errorMessage(err, 'Could not save the teacher.'));
+      this.toast.error(errorMessage(err, 'Could not save the teacher.'));
     } finally {
       this.saving.set('');
     }
   }
 
   protected async removeTeacher(t: Teacher) {
-    if (!confirm(`Remove ${t.name}?`)) return;
+    if (!await this.dialog.confirm(`Remove ${t.name}?`)) return;
     try {
       await this.api.deleteTeacher(t.id);
       this.editing.set(null);
       await this.loadSetup();
       this.load(this.period());
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not remove.'));
+      this.toast.error(errorMessage(e, 'Could not remove.'));
     }
   }
 
   protected async newPin(t: Teacher, typed = '') {
-    if (t.hasPin && !typed && !confirm(`Give ${t.name} a new PIN? Their old PIN stops working and their phone is signed out.`)) return;
+    if (t.hasPin && !typed && !await this.dialog.confirm(`Give ${t.name} a new PIN? Their old PIN stops working and their phone is signed out.`)) return;
     try {
       const { pin } = await this.api.setPin(t.id, typed);
       this.pinShown.set({ teacher: t, pin });
       await this.loadSetup();
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not set the PIN.'));
+      this.toast.error(errorMessage(e, 'Could not set the PIN.'));
     }
   }
 

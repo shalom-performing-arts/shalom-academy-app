@@ -5,6 +5,7 @@ import { RegRow, RegistrationApi } from '../../core/registrations';
 import { Store } from '../../core/store';
 import { Toast } from '../../core/toast';
 import { money } from '../../receipt/format';
+import { Dialog } from '../../core/dialog';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -158,6 +159,7 @@ export function placedMessage(o: {
 })
 export class PlaceSheet {
   protected store = inject(Store);
+  private dialog = inject(Dialog);
   private api = inject(RegistrationApi);
   private toast = inject(Toast);
 
@@ -215,7 +217,7 @@ export class PlaceSheet {
     const r = this.row();
     const s = this.usesSessions() ? this.store.sessions().find(x => x.name === this.ses()) ?? null : null;
     const free = s ? this.sessions().find(o => o.s.name === s.name)?.free ?? null : null;
-    if (free !== null && free <= 0 && !confirm(`${s!.name} is already full. Place ${r.reg.childName} there anyway?`)) return;
+    if (free !== null && free <= 0 && !await this.dialog.confirm(`${s!.name} is already full. Place ${r.reg.childName} there anyway?`)) return;
     this.busy.set(true);
     this.error.set('');
     try {

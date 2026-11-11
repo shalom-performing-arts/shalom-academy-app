@@ -7,6 +7,7 @@ import { Makeup, Mark, RollApi, RollClass, RollDay, RollMonth, RollStudent, cove
 import { Session } from '../../core/models';
 import { Store } from '../../core/store';
 import { Toast } from '../../core/toast';
+import { Dialog } from '../../core/dialog';
 
 type Tab = 'day' | 'month';
 
@@ -23,6 +24,7 @@ type Tab = 'day' | 'month';
 })
 export class Roll {
   private api = inject(RollApi);
+  private dialog = inject(Dialog);
   private toast = inject(Toast);
   private store = inject(Store);
   protected auth = inject(Auth);
@@ -84,7 +86,7 @@ export class Roll {
       this.loadMakeups();
       if (refocus || !d.classes.some(c => c.session.name === this.selected())) this.selected.set(d.focus);
     } catch (e) {
-      if (refocus) this.toast.show(errorMessage(e, 'Could not load the classes.'));
+      if (refocus) this.toast.error(errorMessage(e, 'Could not load the classes.'));
     } finally {
       this.loading.set(false);
     }
@@ -138,7 +140,7 @@ export class Roll {
       this.replaceClass(fresh);
     } catch (e) {
       this.day.set(before);
-      this.toast.show(errorMessage(e, 'Could not save that mark.'));
+      this.toast.error(errorMessage(e, 'Could not save that mark.'));
     } finally {
       this.saving.update(x => { const n = new Set(x); n.delete(s.id); return n; });
     }
@@ -151,7 +153,7 @@ export class Roll {
       this.replaceClass(await this.api.allPresent(this.date(), c.session.name));
       this.toast.show(`Everyone not yet marked in ${c.session.name} is now present. Tap anyone who is late or absent.`);
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not mark everyone present.'));
+      this.toast.error(errorMessage(e, 'Could not mark everyone present.'));
     } finally {
       this.bulk.set(false);
     }
@@ -225,7 +227,7 @@ export class Roll {
       this.loadMakeups();
       this.toast.show(`Cover-up booked: ${b.student.name} → ${m.toLabel}.`);
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not book the cover-up.'));
+      this.toast.error(errorMessage(e, 'Could not book the cover-up.'));
     } finally {
       this.bulk.set(false);
     }
@@ -244,14 +246,14 @@ export class Roll {
   }
 
   protected async cancelMakeup(id: string | null, name: string) {
-    if (!id || !confirm(`Cancel the cover-up for ${name}? Their missed class goes back to absent.`)) return;
+    if (!id || !await this.dialog.confirm(`Cancel the cover-up for ${name}? Their missed class goes back to absent.`)) return;
     try {
       await this.api.cancelMakeup(id);
       await this.load(false);
       this.loadMakeups();
       this.toast.show('Cover-up cancelled.');
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not cancel the cover-up.'));
+      this.toast.error(errorMessage(e, 'Could not cancel the cover-up.'));
     }
   }
 
@@ -288,7 +290,7 @@ export class Roll {
     try {
       this.month.set(await this.api.month(this.monthSession(), this.monthKey()));
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not load the month.'));
+      this.toast.error(errorMessage(e, 'Could not load the month.'));
     }
   }
 

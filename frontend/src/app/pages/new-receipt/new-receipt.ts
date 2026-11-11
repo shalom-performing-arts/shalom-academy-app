@@ -378,7 +378,7 @@ export class NewReceipt {
       this.patch({ id: saved.id });
       return true;
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not save the receipt.'));
+      this.toast.error(errorMessage(e, 'Could not save the receipt.'));
       return false;
     }
   }
@@ -475,7 +475,7 @@ export class NewReceipt {
       this.wa.set(null);
       this.toast.show(`Sent to ${job.parent || (e.to ? prettyWa(e.to) : 'the parent')} — ${names(this.receipt())} marked as paid for ${this.receipt().period}.`);
     } catch (err) {
-      this.toast.show(errorMessage(err, 'The receipt is saved, but could not note that it was sent.'));
+      this.toast.error(errorMessage(err, 'The receipt is saved, but could not note that it was sent.'));
     } finally {
       this.waSaving.set(false);
     }

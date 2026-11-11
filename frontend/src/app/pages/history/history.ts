@@ -5,6 +5,7 @@ import { MonthTotal, Receipt } from '../../core/models';
 import { Store } from '../../core/store';
 import { Toast } from '../../core/toast';
 import { money, names, prettyDate, prettyWa } from '../../receipt/format';
+import { Dialog } from '../../core/dialog';
 
 @Component({
   selector: 'app-history',
@@ -74,6 +75,7 @@ import { money, names, prettyDate, prettyWa } from '../../receipt/format';
 })
 export class History {
   protected store = inject(Store);
+  private dialog = inject(Dialog);
   protected api = inject(Api);
   private toast = inject(Toast);
   private router = inject(Router);
@@ -106,7 +108,7 @@ export class History {
     try {
       await this.api.downloadCsv();
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not export the CSV.'));
+      this.toast.error(errorMessage(e, 'Could not export the CSV.'));
     }
   }
 
@@ -119,11 +121,12 @@ export class History {
   }
 
   protected async remove(r: Receipt) {
-    if (!r.id || !confirm('Delete this receipt from the list? The PDF you already sent is not affected.')) return;
+    if (!r.id || !await this.dialog.confirm('Delete this receipt from the list?\n\nThe PDF you already sent is not affected.')) return;
     // the receipt marked fees as paid; ask whether that still stands
-    const unpaid = confirm(`Was this money actually NOT received?\n\n` +
-      `OK — also mark ${names(r)} as not paid for ${r.period} on the Payments page.\n` +
-      `Cancel — keep the payment (e.g. you are only re-issuing the receipt).`);
+    const unpaid = await this.dialog.confirm(`Was the money for this receipt received?\n\n` +
+      `If it was not, ${names(r)} will be marked as not paid for ${r.period} on the Payments page. ` +
+      `If you are only re-issuing the receipt, keep the payment.`,
+      { ok: 'Not received — mark unpaid', cancel: 'Received — keep payment', danger: true });
     try {
       await this.store.deleteReceipt(r.id, unpaid);
       // a form still showing this receipt becomes an unsaved one again
@@ -131,7 +134,7 @@ export class History {
       if (draft?.id === r.id) this.store.draft.set({ ...draft, id: null });
       this.toast.show('Receipt deleted.');
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not delete the receipt.'));
+      this.toast.error(errorMessage(e, 'Could not delete the receipt.'));
     }
   }
 }

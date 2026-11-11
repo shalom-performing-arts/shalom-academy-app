@@ -6,6 +6,7 @@ import { MonthRow, MonthView, Payment, PaymentKind, SessionTotal } from '../../c
 import { Store, monthKey } from '../../core/store';
 import { Toast } from '../../core/toast';
 import { MONTHS, money, prettyDate, todayIso } from '../../receipt/format';
+import { Dialog } from '../../core/dialog';
 
 interface Group {
   key: string;
@@ -30,6 +31,7 @@ const TILE_COLOURS = ['#1f3864', '#1f4e79', '#b45309', '#4f6b50', '#6e2a52', '#3
 })
 export class Payments {
   protected store = inject(Store);
+  private dialog = inject(Dialog);
   private api = inject(Api);
   private toast = inject(Toast);
   private router = inject(Router);
@@ -136,7 +138,7 @@ export class Payments {
         if (first) this.tab.set(first.name);
       }
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not load the month.'));
+      this.toast.error(errorMessage(e, 'Could not load the month.'));
     } finally {
       this.loading.set(false);
     }
@@ -157,7 +159,7 @@ export class Payments {
       this.view.set(await this.api.startMonth(this.month()));
       this.toast.show(this.monthLabel() + ' started — every student’s fee was copied in.');
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not start the month.'));
+      this.toast.error(errorMessage(e, 'Could not start the month.'));
     }
   }
 
@@ -196,7 +198,7 @@ export class Payments {
       const msg = fromReceipt.length
         ? `Mark ${r.name} as not paid?\n\nThis payment came from receipt ${fromReceipt.join(', ')}. The receipt stays in History.`
         : `Mark ${r.name} as not paid for ${this.monthLabel()}?`;
-      if (!confirm(msg)) return;
+      if (!await this.dialog.confirm(msg)) return;
       await this.run(r.studentId, async () => {
         for (const p of fees) await this.api.deletePayment(p.id);
       }, 'Marked as not paid.');
@@ -228,7 +230,7 @@ export class Payments {
     try {
       this.view.set(await this.api.updateDue(this.month(), r.studentId, { remark: text }));
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not save the remark.'));
+      this.toast.error(errorMessage(e, 'Could not save the remark.'));
     }
   }
 
@@ -260,7 +262,7 @@ export class Payments {
     const msg = p.receiptNumber
       ? `Remove this payment of Rs. ${money(p.amount)}?\n\nIt came from receipt ${p.receiptNumber}, which stays in History.`
       : `Remove this payment of Rs. ${money(p.amount)}?`;
-    if (!confirm(msg)) return;
+    if (!await this.dialog.confirm(msg)) return;
     await this.run(r.studentId, () => this.api.deletePayment(p.id), 'Payment removed.');
   }
 
@@ -272,7 +274,7 @@ export class Payments {
         fee === null ? { reset: true } : { fee }));
       this.toast.show(fee === null ? 'Back to the usual fee.' : `${this.monthLabel()} fee set to Rs. ${money(fee)} for ${r.name}.`);
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not change the fee.'));
+      this.toast.error(errorMessage(e, 'Could not change the fee.'));
     }
   }
 
@@ -355,7 +357,7 @@ export class Payments {
     try {
       await this.api.downloadMonthCsv(this.month());
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not export the month.'));
+      this.toast.error(errorMessage(e, 'Could not export the month.'));
     }
   }
 
@@ -366,7 +368,7 @@ export class Payments {
       await this.load();
       if (done) this.toast.show(done);
     } catch (e) {
-      this.toast.show(errorMessage(e, 'That did not work.'));
+      this.toast.error(errorMessage(e, 'That did not work.'));
       await this.load();
     } finally {
       this.busy.set(null);

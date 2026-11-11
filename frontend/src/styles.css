@@ -993,3 +993,56 @@ kbd{font:600 12px/1 var(--f-body, inherit); padding:3px 6px; border:1px solid #d
 .paper.monthly .rc-items tfoot td{background:rgba(var(--r-seal-rgb), .085)}
 .paper.monthly .rc-words{background:rgba(var(--r-seal-rgb), .045)}
 .paper.monthly .rc-watermark{opacity:.22}
+
+/* =========================================================
+   Messages and "are you sure?" boxes
+   ========================================================= */
+.note-box{
+  --tone:#7c3aed; --soft:#f4eefe; --edge:#ddd0fb;
+  position:fixed; left:50%; bottom:24px; z-index:200; transform:translateX(-50%);
+  display:flex; align-items:flex-start; gap:12px; width:min(520px, calc(100vw - 24px));
+  padding:14px 14px 14px 16px; border-radius:16px; background:#fff; color:#2b1030;
+  border:1px solid var(--edge); border-left:6px solid var(--tone);
+  box-shadow:0 18px 44px rgba(42,15,60,.22), 0 2px 6px rgba(42,15,60,.08);
+  animation:note-in .28s cubic-bezier(.2,.9,.3,1.2);
+}
+.note-box.is-success{--tone:#12b76a; --soft:#e7f8ef; --edge:#c6e9d4}
+.note-box.is-error{--tone:#e5484d; --soft:#fdecec; --edge:#f3c0c0; background:linear-gradient(180deg, #fff, #fff8f8)}
+.note-ico{flex:none; width:30px; height:30px; border-radius:50%; display:grid; place-items:center;
+  background:var(--tone); color:#fff; font-weight:900; font-size:15px; box-shadow:0 4px 10px color-mix(in srgb, var(--tone) 35%, transparent)}
+.note-text{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; padding-top:4px; line-height:1.45; font-size:14.5px}
+.note-text b{font-size:15px; color:color-mix(in srgb, var(--tone) 80%, #1d1b1e)}
+.note-close{flex:none; width:30px; height:30px; border-radius:10px; border:0; background:none; cursor:pointer;
+  color:#8a7590; font-size:14px; line-height:1}
+.note-close:hover{background:var(--soft); color:#2b1030}
+@keyframes note-in{from{opacity:0; transform:translate(-50%, 16px) scale(.97)}}
+
+.ask-bg{position:fixed; inset:0; z-index:210; background:rgba(30,10,30,.42); backdrop-filter:blur(2px); animation:ask-fade .15s ease-out}
+.ask{
+  position:fixed; left:50%; top:50%; z-index:211; transform:translate(-50%, -50%);
+  width:min(440px, calc(100vw - 32px)); max-height:calc(100vh - 40px); overflow:auto;
+  padding:24px 22px 18px; border-radius:22px; background:#fff; text-align:center;
+  border-top:6px solid #7c3aed; box-shadow:0 26px 60px rgba(30,10,30,.35);
+  animation:ask-up .22s cubic-bezier(.2,.9,.3,1.15);
+}
+.ask.danger{border-top-color:#e5484d}
+.ask-ico{display:inline-grid; place-items:center; width:52px; height:52px; border-radius:50%; margin-bottom:8px;
+  background:#f1eafd; color:#6d28d9; font-size:24px; font-weight:900}
+.ask.danger .ask-ico{background:#fdecec; color:#c62828}
+.ask h2{margin:0 0 8px; font-family:var(--f-display); font-size:20px; line-height:1.3; color:#2b1030; letter-spacing:.3px}
+.ask p{margin:0 0 6px; font-size:14.5px; line-height:1.5; color:#5b4660}
+.ask-btns{display:flex; gap:10px; margin-top:16px}
+.ask-btns button{flex:1; min-height:48px; border-radius:14px; font:inherit; font-size:15px; font-weight:800; cursor:pointer}
+.ask-no{border:1px solid #e2d6e6; background:#fff; color:#5b4660}
+.ask-no:hover{background:#faf6fb}
+.ask-yes{border:0; color:#fff; background:linear-gradient(135deg, #8b5cf6, #6d28d9); box-shadow:0 8px 18px rgba(109,40,217,.3)}
+.ask.danger .ask-yes{background:linear-gradient(135deg, #f0565b, #c62828); box-shadow:0 8px 18px rgba(198,40,40,.3)}
+.ask-btns button:active{transform:scale(.97)}
+@keyframes ask-fade{from{opacity:0}}
+@keyframes ask-up{from{opacity:0; transform:translate(-50%, -46%) scale(.96)}}
+@media (max-width:600px){
+  .note-box{bottom:calc(84px + env(safe-area-inset-bottom))}
+  .ask-btns{flex-direction:column-reverse}
+}
+@media (prefers-reduced-motion:reduce){ .note-box, .ask, .ask-bg{animation:none} }
+@media print{ .note-box, .ask, .ask-bg{display:none !important} }

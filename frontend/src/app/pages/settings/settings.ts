@@ -10,6 +10,7 @@ import { Toast } from '../../core/toast';
 import { num } from '../../receipt/format';
 import { SITE_LOGO, SITE_SIGNATURE } from '../../receipt/receipt-sheet';
 import { readImageFile } from '../../receipt/signature';
+import { Dialog } from '../../core/dialog';
 
 const classesToText = (list: ClassFee[]) =>
   list.map(c => (c.fee ? c.name + ' | ' + c.fee : c.name)).join('\n');
@@ -21,6 +22,7 @@ const classesToText = (list: ClassFee[]) =>
 })
 export class Settings {
   protected store = inject(Store);
+  private dialog = inject(Dialog);
   protected api = inject(Api);
   private toast = inject(Toast);
 
@@ -88,9 +90,9 @@ export class Settings {
     box.value = '';
   }
 
-  protected removeFeeType(i: number) {
+  protected async removeFeeType(i: number) {
     const t = this.s().feeTypes[i];
-    if (!confirm(`Remove “${t.name}”?\n\nPayments already recorded as ${t.name} keep it.`)) return;
+    if (!await this.dialog.confirm(`Remove “${t.name}”?\n\nPayments already recorded as ${t.name} keep it.`)) return;
     this.set('feeTypes', this.s().feeTypes.filter((_, j) => j !== i));
   }
 
@@ -116,9 +118,9 @@ export class Settings {
     box.value = '';
   }
 
-  protected removeField(i: number) {
+  protected async removeField(i: number) {
     const f = this.s().studentFields[i];
-    if (!confirm(`Remove the field “${f.label}”?\n\nWhat was entered stays in the student file, but is no longer shown.`)) return;
+    if (!await this.dialog.confirm(`Remove the field “${f.label}”?\n\nWhat was entered stays in the student file, but is no longer shown.`)) return;
     this.set('studentFields', this.s().studentFields.filter((_, j) => j !== i));
   }
 
@@ -141,7 +143,7 @@ export class Settings {
     try {
       await this.api.downloadBackup();
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not export the backup.'));
+      this.toast.error(errorMessage(e, 'Could not export the backup.'));
     }
   }
 
@@ -160,27 +162,27 @@ export class Settings {
       this.toast.show('That file is not a valid backup.');
       return;
     }
-    if (!confirm('Restore this backup? The settings and all receipts on the server will be replaced.')) return;
+    if (!await this.dialog.confirm('Restore this backup? The settings and all receipts on the server will be replaced.')) return;
     try {
       const res = await this.api.restoreBackup(data);
       await Promise.all([this.store.loadSettings(), this.store.loadReceipts()]);
       this.classesText.set(classesToText(this.s().classes));
       this.toast.show('Backup restored — ' + res.receipts + ' receipts.');
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not restore the backup.'));
+      this.toast.error(errorMessage(e, 'Could not restore the backup.'));
     }
   }
 
   protected async wipe() {
     const n = this.store.receipts().length;
     if (!n) { this.toast.show('Nothing to delete.'); return; }
-    if (!confirm('Delete all ' + n + ' saved receipts on the server? Every device will lose them.')) return;
+    if (!await this.dialog.confirm('Delete all ' + n + ' saved receipts on the server? Every device will lose them.')) return;
     try {
       await this.api.deleteAllReceipts();
       this.store.receipts.set([]);
       this.toast.show('All receipts deleted.');
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not delete the receipts.'));
+      this.toast.error(errorMessage(e, 'Could not delete the receipts.'));
     }
   }
 }

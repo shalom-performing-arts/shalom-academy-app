@@ -90,7 +90,7 @@ export class Store {
     try {
       this.settings.set({ ...DEFAULT_SETTINGS, ...(await this.api.settings()) });
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not load settings — using the defaults.'));
+      this.toast.error(errorMessage(e, 'Could not load settings — using the defaults.'));
     }
   }
 
@@ -113,7 +113,7 @@ export class Store {
     try {
       this.receipts.set(await this.api.receipts());
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not load saved receipts.'));
+      this.toast.error(errorMessage(e, 'Could not load saved receipts.'));
     }
   }
 
@@ -133,7 +133,7 @@ export class Store {
         const saved = await this.api.saveSettings(s);
         if (edit === this.settingsEdits) this.settings.set({ ...DEFAULT_SETTINGS, ...saved });
       } catch (e) {
-        this.toast.show(errorMessage(e, 'Could not save settings.'));
+        this.toast.error(errorMessage(e, 'Could not save settings.'));
       }
     }, 400);
   }

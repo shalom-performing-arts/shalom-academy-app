@@ -8,6 +8,7 @@ import { RollApi, coverMessage } from '../../core/roll';
 import { PayStatus, Session, Student } from '../../core/models';
 import { Store } from '../../core/store';
 import { money } from '../../receipt/format';
+import { Dialog } from '../../core/dialog';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -724,6 +725,7 @@ type View = 'class' | 'day';
 })
 export class Classes {
   protected store = inject(Store);
+  private dialog = inject(Dialog);
   private api = inject(Api);
   private toast = inject(Toast);
   private roll = inject(RollApi);
@@ -838,7 +840,7 @@ export class Classes {
       this.sessionEdit.set(null);
       this.toast.show(`${s.rename.trim()} saved.`);
     } catch (err) {
-      this.toast.show(errorMessage(err, 'Could not save the session.'));
+      this.toast.error(errorMessage(err, 'Could not save the session.'));
     } finally {
       this.busy.set(false);
     }
@@ -1101,7 +1103,7 @@ export class Classes {
         toSession: mu.toSession, toDate: mu.toDate, toTime: o.session.time, reason: this.reason(),
       }));
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not book the cover-up.'));
+      this.toast.error(errorMessage(e, 'Could not book the cover-up.'));
     } finally {
       this.busy.set(false);
     }
@@ -1140,7 +1142,7 @@ export class Classes {
         : 'The fee stays the same.',
       g.max !== null && g.students.length >= g.max ? `⚠ ${g.title} is already full (${g.students.length} of ${g.max}).` : '',
     ].filter(x => x !== null);
-    if (!confirm(lines.join('\n').replace(/\n{3,}/g, '\n\n'))) return;
+    if (!await this.dialog.confirm(lines.join('\n').replace(/\n{3,}/g, '\n\n'))) return;
 
     this.busy.set(true);
     try {
@@ -1152,7 +1154,7 @@ export class Classes {
       this.moving.set(null);
       this.toast.show(`${s.name} moved to ${session || g.category}${g.day ? ' — ' + g.day + ' ' + g.time : ''}.`);
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not move the student.'));
+      this.toast.error(errorMessage(e, 'Could not move the student.'));
     } finally {
       this.busy.set(false);
     }

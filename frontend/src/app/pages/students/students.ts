@@ -8,6 +8,7 @@ import { Store, monthKey } from '../../core/store';
 import { Toast } from '../../core/toast';
 import { download } from '../../receipt/export';
 import { MONTHS, money } from '../../receipt/format';
+import { Dialog } from '../../core/dialog';
 
 interface Editing {
   id: string | null;            // null = a new student
@@ -41,6 +42,7 @@ const MONTHS_SHORT = MONTHS.map(m => m.slice(0, 3));
 })
 export class Students {
   protected store = inject(Store);
+  private dialog = inject(Dialog);
   private api = inject(Api);
   private toast = inject(Toast);
 
@@ -206,7 +208,7 @@ export class Students {
       this.classes.set(null);
       this.toast.show('Classes saved.');
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not save the classes.'));
+      this.toast.error(errorMessage(e, 'Could not save the classes.'));
     } finally {
       this.saving.set(false);
     }
@@ -299,7 +301,7 @@ export class Students {
       if (!this.query()) this.tab.set(saved.category);
       this.toast.show(e.id ? `${saved.name} saved.` : `${saved.name} added as ${saved.id}.`);
     } catch (err) {
-      this.toast.show(errorMessage(err, 'Could not save the student.'));
+      this.toast.error(errorMessage(err, 'Could not save the student.'));
     } finally {
       this.saving.set(false);
     }
@@ -308,26 +310,26 @@ export class Students {
   protected async remove() {
     const e = this.editing();
     if (!e?.id) return;
-    if (!confirm(`Delete ${e.form.name} completely?\n\nOnly for someone added by mistake. A student who stops coming should be set to Inactive instead, which keeps their history.`)) return;
+    if (!await this.dialog.confirm(`Delete ${e.form.name} completely?\n\nOnly for someone added by mistake. A student who stops coming should be set to Inactive instead, which keeps their history.`)) return;
     try {
       await this.api.deleteStudent(e.id);
       await this.store.loadRoster(false);
       this.editing.set(null);
       this.toast.show('Student deleted.');
     } catch (err) {
-      this.toast.show(errorMessage(err, 'Could not delete the student.'));
+      this.toast.error(errorMessage(err, 'Could not delete the student.'));
     }
   }
 
   protected async toggleActive(s: Student) {
     const to = !s.active;
-    if (!to && !confirm(`Set ${s.name} to Inactive?\n\nTheir fee stops from the newest month and their place in ${s.session || 'the class'} becomes free. Their history stays.`)) return;
+    if (!to && !await this.dialog.confirm(`Set ${s.name} to Inactive?\n\nTheir fee stops from the newest month and their place in ${s.session || 'the class'} becomes free. Their history stays.`)) return;
     try {
       await this.api.updateStudent(s.id, { ...this.input(s), active: to });
       await this.store.loadRoster(false);
       this.toast.show(`${s.name} is ${to ? 'active again' : 'now inactive'}.`);
     } catch (err) {
-      this.toast.show(errorMessage(err, 'Could not change that.'));
+      this.toast.error(errorMessage(err, 'Could not change that.'));
     }
   }
 
@@ -363,7 +365,7 @@ export class Students {
       this.sessionEdit.set(null);
       this.toast.show(s.create ? `${name} added.` : `${s.rename.trim()} saved.`);
     } catch (err) {
-      this.toast.show(errorMessage(err, 'Could not save the session.'));
+      this.toast.error(errorMessage(err, 'Could not save the session.'));
     } finally {
       this.saving.set(false);
     }
@@ -372,14 +374,14 @@ export class Students {
   protected async deleteSession() {
     const s = this.sessionEdit();
     if (!s || s.create) return;
-    if (!confirm(`Delete the session ${s.name}?`)) return;
+    if (!await this.dialog.confirm(`Delete the session ${s.name}?`)) return;
     try {
       await this.api.deleteSession(s.name);
       await this.store.loadRoster(false);
       this.sessionEdit.set(null);
       this.toast.show(`${s.name} deleted.`);
     } catch (err) {
-      this.toast.show(errorMessage(err, 'Could not delete the session.'));
+      this.toast.error(errorMessage(err, 'Could not delete the session.'));
     }
   }
 

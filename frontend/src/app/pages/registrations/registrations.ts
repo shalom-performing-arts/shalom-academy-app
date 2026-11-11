@@ -9,6 +9,7 @@ import { Store } from '../../core/store';
 import { Toast } from '../../core/toast';
 import { waNumber } from '../../receipt/format';
 import { PlaceSheet } from './place';
+import { Dialog } from '../../core/dialog';
 
 type Status = 'all' | 'pool' | 'placed';
 type Tab = 'pool' | 'form';
@@ -25,6 +26,7 @@ type Tab = 'pool' | 'form';
 })
 export class Registrations {
   protected store = inject(Store);
+  private dialog = inject(Dialog);
   private api = inject(RegistrationApi);
   private toast = inject(Toast);
   private router = inject(Router);
@@ -148,7 +150,7 @@ export class Registrations {
   protected async remove(r: RegRow) {
     const extra = r.status === 'placed'
       ? `\n\n${r.placed!.name} stays a student (${r.placed!.studentId}) — only the registration form is deleted.` : '';
-    if (!confirm(`Delete the registration of ${r.reg.childName} (${r.reg.number})?\n\nThis cannot be undone.${extra}`)) return;
+    if (!await this.dialog.confirm(`Delete the registration of ${r.reg.childName} (${r.reg.number})?\n\nThis cannot be undone.${extra}`)) return;
     try {
       await this.api.delete(r.reg.id);
       this.rows.update(list => list.filter(x => x.reg.id !== r.reg.id));
@@ -156,7 +158,7 @@ export class Registrations {
       this.toast.show(`Registration ${r.reg.number} deleted.`);
       this.refreshForm();
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not delete.'));
+      this.toast.error(errorMessage(e, 'Could not delete.'));
     }
   }
 
@@ -213,7 +215,7 @@ export class Registrations {
     const s = this.store.sessions().find(x => x.name === this.bulkSession());
     const list = this.selectedRows();
     if (!s || !list.length) return;
-    if (!confirm(`Place ${list.length} child${list.length === 1 ? '' : 'ren'} in ${s.name} (${s.category}, ${s.day} ${s.time})?\n\n`
+    if (!await this.dialog.confirm(`Place ${list.length} child${list.length === 1 ? '' : 'ren'} in ${s.name} (${s.category}, ${s.day} ${s.time})?\n\n`
       + list.map(x => '• ' + x.reg.childName).join('\n'))) return;
     this.bulkBusy.set(true);
     const failed: string[] = [];
@@ -264,7 +266,7 @@ export class Registrations {
       this.formView.set(await this.api.saveForm({ open }));
       this.toast.show(open ? 'Registrations are open. Parents can use the link.' : 'Registrations closed. The link now shows your closed message.');
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not change the form.'));
+      this.toast.error(errorMessage(e, 'Could not change the form.'));
     }
   }
 
@@ -281,17 +283,17 @@ export class Registrations {
       this.texts.set(null);
       this.toast.show('Form texts saved.');
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not save.'));
+      this.toast.error(errorMessage(e, 'Could not save.'));
     }
   }
 
   protected async newLink() {
-    if (!confirm('Make a new registration link?\n\nThe old link stops working straight away — parents who still have it will see "this link is not valid". Use this only if the link was shared somewhere it should not be.')) return;
+    if (!await this.dialog.confirm('Make a new registration link?\n\nThe old link stops working straight away — parents who still have it will see "this link is not valid". Use this only if the link was shared somewhere it should not be.')) return;
     try {
       this.formView.set(await this.api.newLink());
       this.toast.show('New link made. Share the new one.');
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not make a new link.'));
+      this.toast.error(errorMessage(e, 'Could not make a new link.'));
     }
   }
 
@@ -299,7 +301,7 @@ export class Registrations {
     try {
       await (kind === 'xlsx' ? this.api.downloadExcel() : this.api.downloadCsv());
     } catch (e) {
-      this.toast.show(errorMessage(e, 'Could not download.'));
+      this.toast.error(errorMessage(e, 'Could not download.'));
     }
   }
 

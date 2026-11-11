@@ -6,6 +6,7 @@ import { filter, map } from 'rxjs';
 import { Auth } from './core/auth';
 import { Store } from './core/store';
 import { Toast } from './core/toast';
+import { Dialog } from './core/dialog';
 import { SITE_LOGO } from './receipt/receipt-sheet';
 
 /** One entry in the side menu. `tone` picks its colour (shell.css). */
@@ -46,6 +47,7 @@ const COLLAPSED_KEY = 'sapa.nav.collapsed';
 export class App {
   protected store = inject(Store);
   protected toast = inject(Toast);
+  protected dialog = inject(Dialog);
   protected auth = inject(Auth);
   private router = inject(Router);
 
