@@ -46,7 +46,7 @@ type View = 'class' | 'day';
   selector: 'app-classes',
   imports: [NgTemplateOutlet, PoolPicker],
   template: `
-    <section class="panel cv">
+    <section class="panel cv" [class]="'panel cv size-' + textSize() + ' cards-' + cardSize()">
 
       <!-- ============ one tile per class ============ -->
       <div class="cv-tiles" role="group" aria-label="Show a class">
@@ -81,7 +81,42 @@ type View = 'class' | 'day';
         <button type="button" class="cv-pool" (click)="openPool()" title="Children registered online, waiting for a class">🧺 Registration pool</button>
         <label class="cv-toggle"><input type="checkbox" [checked]="showPaid()" (change)="showPaid.set(!showPaid())"><span></span>Payments</label>
         <label class="cv-toggle"><input type="checkbox" [checked]="showInactive()" (change)="showInactive.set(!showInactive())"><span></span>Inactive</label>
+        <button type="button" class="cv-adjust-btn" [class.is-on]="adjusting()" (click)="adjusting.set(!adjusting())"
+                [attr.aria-expanded]="adjusting()">⚙ View</button>
       </div>
+
+      <!-- ============ how the page looks (remembered on this computer) ============ -->
+      @if (adjusting()) {
+        <div class="cv-adjust" role="group" aria-label="How the classes are shown">
+          <div class="cv-adj"><span>Text size</span>
+            <div class="cv-seg">
+              <button type="button" [class.is-on]="textSize() === 's'" (click)="textSize.set('s')" title="Smaller">A−</button>
+              <button type="button" [class.is-on]="textSize() === 'm'" (click)="textSize.set('m')" title="Normal">A</button>
+              <button type="button" [class.is-on]="textSize() === 'l'" (click)="textSize.set('l')" title="Larger">A+</button>
+            </div></div>
+          <div class="cv-adj"><span>Students</span>
+            <div class="cv-seg">
+              <button type="button" [class.is-on]="names() === 'all'" (click)="names.set('all')">Show all</button>
+              <button type="button" [class.is-on]="names() === 'counts'" (click)="names.set('counts'); clearOpen()">Counts only</button>
+            </div></div>
+          <div class="cv-adj"><span>Order</span>
+            <div class="cv-seg">
+              <button type="button" [class.is-on]="order() === 'name'" (click)="order.set('name')">A–Z</button>
+              <button type="button" [class.is-on]="order() === 'unpaid'" (click)="order.set('unpaid'); showPaid.set(true)">Unpaid first</button>
+            </div></div>
+          <div class="cv-adj"><span>Cards</span>
+            <div class="cv-seg">
+              <button type="button" [class.is-on]="cardSize() === 'narrow'" (click)="cardSize.set('narrow')">Narrow</button>
+              <button type="button" [class.is-on]="cardSize() === 'wide'" (click)="cardSize.set('wide')">Wide</button>
+            </div></div>
+          <div class="cv-adj"><span>Classes</span>
+            <div class="cv-seg">
+              <button type="button" (click)="expandAll()">Expand all</button>
+              <button type="button" (click)="collapseAll()">Collapse all</button>
+            </div></div>
+          <button type="button" class="cv-adj-reset" (click)="resetView()">Reset</button>
+        </div>
+      }
       @if (showPaid()) {
         <p class="cv-key">
           <span><i class="d st-paid"></i>Paid</span><span><i class="d st-part"></i>Part paid</span>
@@ -94,8 +129,11 @@ type View = 'class' | 'day';
       <!-- ============ by class ============ -->
       @if (view() === 'class') {
         @for (c of shown(); track c.name) {
-          <article class="cv-class" [style.--c]="c.colour">
+          <article class="cv-class" [style.--c]="c.colour" [class.is-collapsed]="collapsed().has(c.name)">
             <header class="cv-class-head">
+              <button type="button" class="cv-collapse" (click)="toggleClass(c.name)"
+                      [attr.aria-expanded]="!collapsed().has(c.name)"
+                      [title]="collapsed().has(c.name) ? 'Show this class' : 'Hide this class'">{{ collapsed().has(c.name) ? '▸' : '▾' }}</button>
               <span class="cv-class-mark">{{ c.name.charAt(0) }}</span>
               <div class="cv-class-title">
                 <h2>{{ c.name }}</h2>
@@ -107,11 +145,13 @@ type View = 'class' | 'day';
                 <span class="fee"><b>{{ c.fee.replace(' a month', '').replace(' a term', '') }}</b>{{ c.fee.includes('term') ? 'a term' : c.fee.includes('month') ? 'a month' : '' }}</span>
               </div>
             </header>
-            <div class="cv-grid">
-              @for (g of c.groups; track g.key) {
-                <ng-container *ngTemplateOutlet="card; context: { $implicit: g, compact: false }" />
-              }
-            </div>
+            @if (!collapsed().has(c.name)) {
+              <div class="cv-grid">
+                @for (g of c.groups; track g.key) {
+                  <ng-container *ngTemplateOutlet="card; context: { $implicit: g, compact: false }" />
+                }
+              </div>
+            }
           </article>
         } @empty {
           <p class="cv-nothing">No students match “{{ query() }}”.</p>
@@ -151,11 +191,15 @@ type View = 'class' | 'day';
             @if (g.meaning) { <small>{{ g.meaning }}</small> }
           </div>
           @if (compact) { <span class="cv-cat">{{ g.category }}</span> }
+          @if (sessionOf(g); as se) {
+            <button type="button" class="cv-edit" (click)="editSession(se)" [title]="'Change ' + g.title + ' (day, time, places)'" aria-label="Edit session">✎</button>
+          }
         </div>
         @if (g.time || g.day) {
+          <!-- the day and time on one strong line: the first thing read on a card -->
           <p class="cv-when">
             @if (!compact && g.day) {
-              <span class="cv-wday"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>{{ g.day }}</span>
+              <span class="cv-wday" [title]="g.day"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>{{ g.day.slice(0, 3) }}</span>
             }
             @if (g.time) {
               <span class="cv-time"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>{{ g.time }}</span>
@@ -171,22 +215,37 @@ type View = 'class' | 'day';
           </span>
           @if (g.max) { <i class="cv-cap-bar"><span [style.width.%]="pct(g.students.length, g.max)"></span></i> }
         </div>
-        <ol class="cv-names">
-          @for (s of g.students; track s.id; let i = $index) {
-            <li [class]="'st-' + statusClass(s)" [class.is-hit]="hit(s)" [class.is-off]="!s.active"
-                [class.is-dragging]="dragId() === s.id" draggable="true"
-                (dragstart)="dragStart($event, s, g)" (dragend)="dragEnd()"
-                [title]="tip(s) + '\\n\\nDrag to another session to move them, or click for options'" (click)="openMove(s)">
-              <span class="grip" aria-hidden="true">⋮⋮</span><span class="n">{{ i + 1 }}</span><span class="nm">{{ s.name }}</span><i class="d"></i>
-            </li>
-          } @empty {
-            @if (!g.max) { <li class="cv-empty">No students yet</li> }
+        @if (names() === 'counts' && !openGroups().has(g.key) && !hasHit(g)) {
+          <!-- counts only: tap to see the names -->
+          <button type="button" class="cv-reveal" (click)="toggleGroup(g.key)">
+            👥 Show {{ g.students.length }} {{ g.students.length === 1 ? 'student' : 'students' }}
+            @if (showPaid() && dueCount(g)) { <em>{{ dueCount(g) }} not paid</em> }
+          </button>
+        } @else {
+          <ol class="cv-names">
+            @for (s of ordered(g); track s.id; let i = $index) {
+              <li [class]="'st-' + statusClass(s)" [class.is-hit]="hit(s)" [class.is-off]="!s.active"
+                  [class.is-dragging]="dragId() === s.id" draggable="true"
+                  (dragstart)="dragStart($event, s, g)" (dragend)="dragEnd()"
+                  [title]="tip(s) + '\\n\\nDrag to another session to move them, or click for options'" (click)="openMove(s)">
+                <span class="grip" aria-hidden="true">⋮⋮</span><span class="n">{{ i + 1 }}</span><span class="nm">{{ s.name }}</span>
+                @if (payLabel(s); as pl) { <i class="pay">{{ pl }}</i> }
+              </li>
+            } @empty {
+              @if (!g.max) { <li class="cv-empty">No students yet</li> }
+            }
+            <!-- the empty places, as one row -->
+            @if (freeSlots(g).length; as free) {
+              <li class="cv-free" [class.can-fill]="canFill(g)" (click)="fillFree(g)" [attr.title]="canFill(g) ? 'Add a child from the registration pool' : null">
+                <i class="seat">＋</i><span class="nm">{{ free }} free {{ free === 1 ? 'place' : 'places' }}</span>
+                @if (canFill(g)) { <span class="cv-free-add">Add from pool</span> }
+              </li>
+            }
+          </ol>
+          @if (names() === 'counts' && openGroups().has(g.key)) {
+            <button type="button" class="cv-reveal close" (click)="toggleGroup(g.key)">Hide names</button>
           }
-          <!-- the empty places, like the blank rows on the paper register -->
-          @for (x of freeSlots(g); track $index) {
-            <li class="cv-free" [class.can-fill]="canFill(g)" (click)="fillFree(g)" [attr.title]="canFill(g) ? 'Add a child from the registration pool' : null"><span class="n">{{ g.students.length + $index + 1 }}</span><span class="nm">Free place</span><i class="seat">＋</i></li>
-          }
-        </ol>
+        }
         @if (dragId() && dropKey() === g.key) { <p class="cv-drophint">Drop to move here</p> }
       </div>
     </ng-template>
@@ -194,6 +253,38 @@ type View = 'class' | 'day';
     <!-- ============ fill a free place from the registration pool ============ -->
     @if (filling(); as fs) {
       <app-pool-picker [session]="fs" (closed)="filling.set(null)" />
+    }
+
+    <!-- ============ change a session: day, time, places ============ -->
+    @if (sessionEdit(); as se) {
+      <div class="sheet-backdrop" (click)="sessionEdit.set(null)"></div>
+      <aside class="sheet small cv-edit-sheet" role="dialog" aria-modal="true" aria-label="Edit session">
+        <header class="sheet-head">
+          <div><h2>✎ {{ se.name }}</h2><small>{{ se.category }} · its students move with it</small></div>
+          <button type="button" class="btn-icon" (click)="sessionEdit.set(null)" aria-label="Close">✕</button>
+        </header>
+        <div class="sheet-body">
+          <label class="field"><span>Name</span>
+            <input type="text" maxlength="60" [value]="se.rename" (input)="patchEdit({ rename: $any($event.target).value })"></label>
+          <div class="cv-edit-grid">
+            <label class="field"><span>Day</span>
+              <select [value]="se.day" (change)="patchEdit({ day: $any($event.target).value })">
+                @for (d of days; track d) { <option [value]="d" [selected]="d === se.day">{{ d }}</option> }
+              </select></label>
+            <label class="field"><span>Time</span>
+              <input type="text" maxlength="40" placeholder="3:30 - 4:30 PM" [value]="se.time" (input)="patchEdit({ time: $any($event.target).value })"></label>
+            <label class="field"><span>Places <em>(blank = no limit)</em></span>
+              <input type="number" min="0" max="200" [value]="se.max ?? ''" (input)="patchEdit({ max: $any($event.target).value })"></label>
+          </div>
+          <label class="field"><span>Meaning <em>(optional)</em></span>
+            <input type="text" maxlength="80" placeholder="e.g. loud and strong" [value]="se.meaning" (input)="patchEdit({ meaning: $any($event.target).value })"></label>
+          <footer class="sheet-foot">
+            <button type="button" class="btn btn-ghost" (click)="sessionEdit.set(null)">Cancel</button>
+            <span class="spacer"></span>
+            <button type="button" class="btn" [disabled]="busy()" (click)="saveSession()">{{ busy() ? 'Saving…' : 'Save' }}</button>
+          </footer>
+        </div>
+      </aside>
     }
 
     <!-- ============ move a student (tap a name; the way on a phone) ============ -->
@@ -509,6 +600,112 @@ type View = 'class' | 'day';
       .cv-names li{font-size:15px; padding:9px 8px}
       .cv-key em{margin-left:0; flex-basis:100%}
     }
+
+    /* =========================================================
+       Clearer, and set up the way the office likes
+       ========================================================= */
+
+    /* the class tiles fill one row */
+    .cv-tiles{grid-template-columns:repeat(auto-fit, minmax(140px, 1fr))}
+
+    /* ---- the View panel ---- */
+    .cv-adjust-btn{border:1px solid #e3d6ec; background:#fff; cursor:pointer; font:inherit; font-size:14px; font-weight:800; color:#5b21b6;
+      min-height:40px; padding:0 14px; border-radius:12px}
+    .cv-adjust-btn.is-on{background:#5b21b6; border-color:#5b21b6; color:#fff}
+    .cv-adjust{display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px 18px; margin-top:-6px; padding:14px 16px; border-radius:18px;
+      background:linear-gradient(180deg, #faf7fd, #fff); border:1px solid #e9def0; box-shadow:0 6px 18px rgba(91,33,182,.07)}
+    .cv-adj{display:flex; flex-direction:column; gap:5px}
+    .cv-adj > span{font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:.8px; color:#8a7590}
+    .cv-seg{display:flex; gap:3px; padding:3px; border-radius:12px; background:#f1ebf6}
+    .cv-seg button{border:0; cursor:pointer; min-height:34px; padding:0 12px; border-radius:9px; background:none; font:inherit;
+      font-size:13.5px; font-weight:700; color:#6f5a76; white-space:nowrap}
+    .cv-seg button.is-on{background:#fff; color:#3a1238; box-shadow:0 2px 8px rgba(58,18,56,.14)}
+    .cv-seg button:active{transform:scale(.97)}
+    .cv-adj-reset{margin-left:auto; border:0; background:none; cursor:pointer; font:inherit; font-size:13px; font-weight:700;
+      color:#8a7590; text-decoration:underline; min-height:34px}
+
+    /* ---- collapsing a class ---- */
+    .cv-collapse{flex:none; width:36px; height:36px; border-radius:11px; border:1px solid rgba(255,255,255,.35); cursor:pointer;
+      background:rgba(255,255,255,.14); color:#fff; font-size:16px; line-height:1}
+    .cv-collapse:hover{background:rgba(255,255,255,.26)}
+    .cv-class.is-collapsed{box-shadow:0 6px 16px color-mix(in srgb, var(--c) 10%, transparent)}
+
+    /* ---- a session: edit, day and time on one line ---- */
+    .cv-edit{flex:none; width:34px; height:34px; border-radius:10px; cursor:pointer; font-size:15px; line-height:1;
+      border:1px solid color-mix(in srgb, var(--c) 25%, #fff); background:#fff; color:color-mix(in srgb, var(--c) 80%, #1d1b1e)}
+    .cv-edit:hover{background:color-mix(in srgb, var(--c) 10%, #fff)}
+    .cv-when{gap:6px}
+    .cv-when span{padding:7px 12px}
+    .cv-when .cv-wday{font-size:13.5px}
+    .cv-when .cv-time{font-size:16px}
+
+    /* ---- the payment, in a word ---- */
+    .cv-names li i.pay{flex:none; font-style:normal; font-size:11px; font-weight:800; letter-spacing:.3px; padding:2px 8px; border-radius:999px;
+      background:color-mix(in srgb, var(--dot) 14%, #fff); color:color-mix(in srgb, var(--dot) 80%, #1d1b1e);
+      border:1px solid color-mix(in srgb, var(--dot) 35%, #fff)}
+    .cv-names li.st-pending{box-shadow:inset 3px 0 0 #e5484d}
+    .cv-names li.st-part{box-shadow:inset 3px 0 0 #f0a020}
+    .cv-names .nm{overflow-wrap:anywhere; line-height:1.3}
+
+    /* ---- the free places, as one row ---- */
+    .cv-names li.cv-free{gap:10px; font-style:normal}
+    .cv-names li.cv-free .nm{font-weight:700}
+    .cv-free-add{margin-left:auto; font-size:12px; font-weight:800; color:#047857; text-decoration:underline}
+    .cv-names li.cv-free.can-fill:hover .nm::after{content:none}
+
+    /* ---- counts only ---- */
+    .cv-reveal{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:44px; border-radius:12px; cursor:pointer;
+      border:1.5px dashed color-mix(in srgb, var(--c) 35%, #fff); background:color-mix(in srgb, var(--c) 5%, #fff);
+      font:inherit; font-size:14px; font-weight:800; color:color-mix(in srgb, var(--c) 80%, #1d1b1e)}
+    .cv-reveal em{font-style:normal; font-size:12px; padding:2px 8px; border-radius:999px; background:#fde3e3; color:#b3261e}
+    .cv-reveal.close{min-height:34px; border-style:solid; font-size:12.5px; font-weight:700}
+
+    /* ---- text size ---- */
+    .cv.size-s .cv-names li{font-size:12.5px; padding:5px 7px}
+    .cv.size-s .cv-s-title b{font-size:17px}
+    .cv.size-s .cv-when .cv-time{font-size:14px}
+    .cv.size-l .cv-names li{font-size:16.5px; padding:10px 9px}
+    .cv.size-l .cv-names .n{font-size:13.5px; width:26px}
+    .cv.size-l .cv-names li i.pay{font-size:12.5px; padding:3px 10px}
+    .cv.size-l .cv-s-title b{font-size:23px}
+    .cv.size-l .cv-s-title small{font-size:14px}
+    .cv.size-l .cv-when .cv-time{font-size:19px}
+    .cv.size-l .cv-when .cv-wday{font-size:15px}
+    .cv.size-l .cv-cap-text{font-size:14.5px}
+
+    /* ---- card width ---- */
+    .cv.cards-wide .cv-grid{grid-template-columns:repeat(auto-fill, minmax(400px, 1fr))}
+    .cv.cards-wide .cv-names{grid-template-columns:1fr 1fr; column-gap:8px}
+    .cv.cards-wide .cv-names li.cv-free, .cv.cards-wide .cv-names li.cv-empty{grid-column:1 / -1}
+
+    /* names never push past the card: the list column may shrink */
+    .cv-names{grid-template-columns:minmax(0, 1fr)}
+    .cv.cards-wide .cv-names{grid-template-columns:minmax(0, 1fr) minmax(0, 1fr)}
+    .cv-names li{min-width:0}
+    /* day and time as one joined pill on one line */
+    .cv-when{flex-wrap:wrap; gap:0; row-gap:6px}
+    .cv-when span{padding:7px 10px}
+    .cv-when .cv-time{font-size:15px; letter-spacing:0}
+    .cv-when .cv-time svg, .cv-when .cv-wday svg{width:16px; height:16px}
+    .cv-session:not(.compact) .cv-when .cv-time svg{display:none}
+    .cv-when .cv-wday{border-radius:12px 0 0 12px; letter-spacing:1.5px}
+    .cv-when .cv-time{border-radius:0 12px 12px 0; border-left:0; white-space:nowrap}
+    .cv-when .cv-time:only-child{border-radius:12px; border-left:2px solid color-mix(in srgb, var(--c) 45%, #fff)}
+
+    /* ---- editing a session ---- */
+    .cv-edit-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .cv-edit-grid .field:last-child{grid-column:1 / -1}
+    .cv-edit-sheet .field{margin-bottom:10px}
+    .cv-edit-sheet select, .cv-edit-sheet input{width:100%}
+
+    @media (max-width:720px){
+      .cv-adjust{padding:12px}
+      .cv-adj{flex:1 1 100%}
+      .cv-seg button{flex:1}
+      .cv-adj-reset{margin-left:0}
+      .cv.cards-wide .cv-grid{grid-template-columns:1fr}
+      .cv.cards-wide .cv-names{grid-template-columns:1fr}
+    }
   `,
 })
 export class Classes {
@@ -528,8 +725,104 @@ export class Classes {
   private readonly status = signal<Map<string, PayStatus>>(new Map());
   protected readonly monthLabel = signal('');
   protected readonly todayName = DAYS[(new Date().getDay() + 6) % 7];
+  protected readonly days = DAYS;
+
+  /* ---------------- how the page looks (remembered on this computer) ---------------- */
+
+  private readonly saved = readView();
+  protected readonly adjusting = signal(false);
+  protected readonly textSize = signal<TextSize>(this.saved.textSize ?? 'm');
+  protected readonly names = signal<'all' | 'counts'>(this.saved.names ?? 'all');
+  protected readonly order = signal<'name' | 'unpaid'>(this.saved.order ?? 'name');
+  protected readonly cardSize = signal<'narrow' | 'wide'>(this.saved.cardSize ?? 'narrow');
+  protected readonly collapsed = signal<Set<string>>(new Set(this.saved.collapsed ?? []));
+  /** sessions opened while "counts only" is on */
+  protected readonly openGroups = signal<Set<string>>(new Set());
+
+  protected toggleClass(name: string) {
+    this.collapsed.update(s => { const n = new Set(s); if (n.has(name)) n.delete(name); else n.add(name); return n; });
+  }
+  protected expandAll() { this.collapsed.set(new Set()); }
+  protected collapseAll() { this.collapsed.set(new Set(this.blocks().map(b => b.name))); }
+  protected toggleGroup(key: string) {
+    this.openGroups.update(s => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  }
+  protected clearOpen() { this.openGroups.set(new Set()); }
+  protected resetView() {
+    this.textSize.set('m'); this.names.set('all'); this.order.set('name'); this.cardSize.set('narrow');
+    this.collapsed.set(new Set()); this.openGroups.set(new Set());
+  }
+
+  /** a session holding a search match always shows its names */
+  protected hasHit(g: Group): boolean {
+    const q = this.query().trim().toLowerCase();
+    return !!q && g.students.some(s => matches(s, q));
+  }
+
+  protected dueCount(g: Group): number {
+    return g.students.filter(s => { const c = this.statusClass(s); return c === 'pending' || c === 'part'; }).length;
+  }
+
+  /** the students in the chosen order: A–Z, or the ones still to pay first */
+  protected ordered(g: Group): Student[] {
+    if (this.order() !== 'unpaid') return g.students;
+    const rank: Record<string, number> = { pending: 0, part: 1, none: 2, off: 3, free: 4, paid: 5 };
+    return [...g.students].sort((a, b) => (rank[this.statusClass(a)] ?? 2) - (rank[this.statusClass(b)] ?? 2) || byName(a, b));
+  }
+
+  /** the payment, in a word */
+  protected payLabel(s: Student): string {
+    switch (this.statusClass(s)) {
+      case 'paid': return 'Paid';
+      case 'part': return 'Part';
+      case 'pending': return 'Due';
+      case 'free': return 'Free';
+      case 'off': return 'Not due';
+      default: return '';
+    }
+  }
+
+  /* ---------------- change a session ---------------- */
+
+  protected readonly sessionEdit = signal<SessionEdit | null>(null);
+
+  /** the real session behind a card (not "Not placed yet" or a session that no longer exists) */
+  protected sessionOf(g: Group): Session | null {
+    return g.key.startsWith('~') ? null : this.store.sessions().find(x => x.name === g.key) ?? null;
+  }
+
+  protected editSession(s: Session) {
+    this.sessionEdit.set({ name: s.name, rename: s.name, category: s.category, day: s.day, time: s.time, max: s.max, meaning: s.meaning ?? '' });
+  }
+
+  protected patchEdit(p: Partial<SessionEdit>) {
+    this.sessionEdit.update(s => s && ({ ...s, ...p }));
+  }
+
+  protected async saveSession() {
+    const s = this.sessionEdit();
+    if (!s || this.busy()) return;
+    if (!s.rename.trim()) { this.toast.show('Give the session a name.'); return; }
+    const max = s.max === null || (s.max as unknown) === '' ? null : Number(s.max);
+    if (max !== null && (!Number.isFinite(max) || max < 0)) { this.toast.show('Places should be a number.'); return; }
+    this.busy.set(true);
+    try {
+      await this.api.saveSession({ name: s.name, rename: s.rename.trim(), category: s.category, day: s.day,
+                                   time: s.time.trim(), max, meaning: s.meaning }, false);
+      await this.store.loadRoster(false);
+      this.sessionEdit.set(null);
+      this.toast.show(`${s.rename.trim()} saved.`);
+    } catch (err) {
+      this.toast.show(errorMessage(err, 'Could not save the session.'));
+    } finally {
+      this.busy.set(false);
+    }
+  }
 
   constructor() {
+    // remember how the page was set up
+    effect(() => writeView({ textSize: this.textSize(), names: this.names(), order: this.order(),
+                             cardSize: this.cardSize(), collapsed: [...this.collapsed()] }));
     // payment colours come from the month the Payments page shows
     effect(() => {
       const month = this.store.paymentsMonth();
@@ -867,4 +1160,36 @@ function isoDay(d: Date): string {
 
 function matches(s: Student, q: string): boolean {
   return (s.name + ' ' + s.id + ' ' + (s.parent || '')).toLowerCase().includes(q);
+}
+
+/* ---------------- how the page looks, remembered in this browser ---------------- */
+
+type TextSize = 's' | 'm' | 'l';
+
+interface SessionEdit {
+  name: string;
+  rename: string;
+  category: string;
+  day: string;
+  time: string;
+  max: number | null;
+  meaning: string;
+}
+
+interface ViewPrefs {
+  textSize?: TextSize;
+  names?: 'all' | 'counts';
+  order?: 'name' | 'unpaid';
+  cardSize?: 'narrow' | 'wide';
+  collapsed?: string[];
+}
+
+const VIEW_KEY = 'sapa.classes.view';
+
+function readView(): ViewPrefs {
+  try { return JSON.parse(localStorage.getItem(VIEW_KEY) ?? '{}') as ViewPrefs; } catch { return {}; }
+}
+
+function writeView(v: ViewPrefs) {
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify(v)); } catch { /* private mode: not remembered */ }
 }
