@@ -91,7 +91,7 @@ export class Payments {
     // a search looks across every class; otherwise just the open tab
     const rows = v.rows.filter(r => (q ? true : r.category === this.tab()))
       .filter(r => !q || (r.name + ' ' + r.studentId + ' ' + r.session + ' ' + r.parent).toLowerCase().includes(q))
-      .filter(r => f === 'all' || (f === 'paid' ? r.status === 'Paid' : r.status === 'Pending' || r.status === 'Partially Paid'));
+      .filter(r => f === 'all' || (f === 'paid' ? r.status === 'Paid' || r.status === 'Free place' : r.status === 'Pending' || r.status === 'Partially Paid'));
 
     const out: Group[] = [];
     const sessions = v.sessions.filter(s => q || s.category === this.tab());
@@ -382,8 +382,9 @@ export class Payments {
     }[s] ?? '';
   }
 
+  /** "46.6%", as the workbook shows it ("100%", not "100.0%") */
   protected pct(n: number) {
-    return Math.round(n * 100) + '%';
+    return Math.round(n * 1000) / 10 + '%';
   }
 
   protected kindLabel(k: string) {

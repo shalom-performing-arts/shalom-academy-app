@@ -308,7 +308,7 @@ class PgRepositoriesTest {
         Repos again = repos();
         var nov = again.payments().findByMonth("2026-11");
         assertThat(nov).extracting(lk.shalom.receipts.model.Payment::studentName)
-                .containsExactlyInAnyOrder("Giana Neshi", "Zaki Azhar");
+                .containsExactlyInAnyOrder("Giana Neshi", "Thenul Munasinghe", "Zaki Azhar");
         assertThat(again.roster().load().sessions()).extracting(lk.shalom.receipts.model.Roster.Session::name)
                 .containsExactly("Forte", "Legato");
         assertThat(again.roster().load().students().stream().filter(lk.shalom.receipts.model.Roster.Student::active)

@@ -229,6 +229,7 @@ public class WorkbookImport {
             String mon = month.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
             int monCol = indexOf(header, mon);
             String onlineCat = "Online";
+            int onlineTicked = 0;
             for (int i = oh + 1; i < on.size(); i++) {
                 List<String> r = on.get(i);
                 String n = cell(r, name);
@@ -239,16 +240,14 @@ public class WorkbookImport {
                 k.online = true;
                 k.country = country >= 0 ? cell(r, country) : "";
                 if (k.country.equalsIgnoreCase("To confirm")) { k.note = "Country to confirm"; k.country = ""; }
-                if (monCol >= 0 && cell(r, monCol).toLowerCase().contains("done")) {
-                    BigDecimal amt = money(cell(r, monCol + 1));
-                    if (amt != null && amt.signum() > 0) {
-                        k.collected = amt.setScale(0, RoundingMode.HALF_UP);
-                        k.paidTo = "Shalom Academy";
-                    } else {
-                        warnings.add(k.name + " (online) is marked Done for " + mon + " with no amount, so no payment was added.");
-                    }
-                }
+                // the online sheet's ticks are not part of the Dashboard's totals, so they are not
+                // brought in as payments: online payments are entered on the Payments page as they come
+                if (monCol >= 0 && cell(r, monCol).toLowerCase().contains("done")) onlineTicked++;
                 kids.add(k);
+            }
+            if (onlineTicked > 0) {
+                warnings.add(onlineTicked + " online student(s) are marked Done for " + mon + " on the Online Class sheet. "
+                        + "That sheet is not in the Dashboard's totals, so they were not added as payments: enter them on the Payments page.");
             }
         }
 
@@ -547,14 +546,16 @@ public class WorkbookImport {
             String id = str(s.get("sapaId"));
             if (k.active && !k.online && k.monthFee != null) monthFees.put(id, k.monthFee);
             if (!nz(k.remark).isEmpty()) remarks.put(id, k.remark);
-            if (k.collected.signum() <= 0) continue;
+            // a free place ticked as paid: the workbook records it as "Rs.0 paid to …", and counts it as a payment
+            boolean freeTick = !k.online && k.active && k.ticked && k.monthFee != null && k.monthFee.signum() == 0;
+            if (k.collected.signum() <= 0 && !freeTick) continue;
             String paidTo = options.stream().filter(o -> o.equalsIgnoreCase(nz(k.paidTo).trim())).findFirst()
                     .orElse(nz(k.paidTo).isBlank() ? (options.isEmpty() ? "Shalom Academy" : options.getFirst()) : k.paidTo.trim());
             // the day it was paid: kept from the app's own record of it, when there was one
             String date = removed.stream().filter(p -> id.equals(p.studentId())).map(Payment::date).filter(Objects::nonNull)
                     .findFirst().orElse(today);
             added_.add(new Payment(newId(), id, k.name, month, Payment.MONTHLY, k.collected, paidTo, date,
-                    k.online ? "From the Online Class sheet" : null, null, null, now));
+                    freeTick ? "Free place" : null, null, null, now));
         }
         kept.addAll(added_);
 
@@ -578,7 +579,7 @@ public class WorkbookImport {
             checks.add(new Check("Expected this month", "Rs. " + plain(book.dashExpected()), "Rs. " + plain(expected),
                     book.dashExpected().compareTo(expected) == 0));
         }
-        List<Payment> classPayments = added_.stream().filter(p -> p.note() == null).toList();
+        List<Payment> classPayments = added_;
         BigDecimal collected = classPayments.stream().map(Payment::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
         if (book.dashCollected() != null) {
             checks.add(new Check("Collected", "Rs. " + plain(book.dashCollected()), "Rs. " + plain(collected),
@@ -588,22 +589,15 @@ public class WorkbookImport {
             List<Payment> to = classPayments.stream().filter(p -> e.getKey().equalsIgnoreCase(p.paidTo())).toList();
             BigDecimal amt = to.stream().map(Payment::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
             Integer wantCount = book.dashCount().get(e.getKey());
-            // the workbook counts a free place ticked as paid as a payment (of Rs.0); the app does not
-            long freeTicks = wantCount == null ? 0 : classKids.stream().filter(k -> k.active && k.monthFee != null && k.monthFee.signum() == 0
-                    && e.getKey().equalsIgnoreCase(nz(k.paidTo)) && k.collected.signum() == 0 && k.ticked).count();
-            boolean countOk = wantCount == null || wantCount == to.size() || wantCount == to.size() + freeTicks;
+            boolean countOk = wantCount == null || wantCount == to.size();
             checks.add(new Check("Paid to " + e.getKey(),
                     "Rs. " + plain(e.getValue()) + (wantCount == null ? "" : " · " + wantCount + " payments"),
                     "Rs. " + plain(amt) + " · " + to.size() + " payments",
                     e.getValue().compareTo(amt) == 0 && countOk));
         }
         classKids.stream().filter(k -> k.active && k.monthFee != null && k.monthFee.signum() == 0)
-                .forEach(k -> warnings.add(k.name + " has a free place (fee Rs.0): shown as \"Free place\", with no payment."));
-        long onlinePaid = added_.stream().filter(p -> p.note() != null).count();
-        if (onlinePaid > 0) {
-            warnings.add(onlinePaid + " online payment(s) were read from the Online Class sheet (the amount beside \""
-                    + book.month().getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH) + "\"), paid to Shalom Academy. They are not in the Dashboard's totals.");
-        }
+                .forEach(k -> warnings.add(k.name + " has a free place (fee Rs.0): shown as \"Free place\" and counted in Paid"
+                        + (k.ticked ? ", with a Rs.0 payment as the workbook records it." : ".")));
 
         Map<String, PaidTo> byPaidTo = new LinkedHashMap<>();
         for (Payment p : added_) {

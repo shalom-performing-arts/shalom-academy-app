@@ -296,14 +296,17 @@ public class MonthService {
     static String status(Due d, BigDecimal paid) {
         if (!d.active()) return INACTIVE;
         if (d.notDueThisMonth() && paid.signum() == 0) return NOT_DUE;   // a term class, between terms
-        if (d.fee() == null) return paid.signum() > 0 ? PAID : PENDING;   // pays as they go
+        // pays as they go (online): nothing is owed in advance, so no payment yet is "not due", not "pending"
+        if (d.fee() == null) return paid.signum() > 0 ? PAID : NOT_DUE;
         if (d.fee().signum() == 0) return FREE;
         if (paid.compareTo(d.fee()) >= 0) return PAID;
         return paid.signum() > 0 ? PARTIAL : PENDING;
     }
 
     private static Totals totals(List<Row> rows, List<Payment> monthPayments) {
-        List<Row> active = rows.stream().filter(Row::active).toList();
+        // the students the month is about, as in the workbook: those with a monthly fee (a free place
+        // counts; pay-as-you-go online students have their own line under "By class")
+        List<Row> active = rows.stream().filter(Row::active).filter(x -> x.fee() != null).toList();
         BigDecimal expected = sum(active.stream().map(x -> x.fee() == null ? BigDecimal.ZERO : x.fee()));
         BigDecimal collected = sum(monthPayments.stream().filter(p -> Payment.MONTHLY.equals(p.kind())));
         BigDecimal other = sum(monthPayments.stream().filter(p -> !Payment.MONTHLY.equals(p.kind())));

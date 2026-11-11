@@ -82,7 +82,7 @@ public class WorkbookImportTest {
                 r("", "Shalom Academy", "", "", "Rebeccah Nayomi", "", "", "Cash"),
                 r("", "8000", "", "", "0", "", "", "6000"),
                 r(""),
-                r("", "bank account      1 payments", "", "", "bank account      0 payments", "", "", "handed over      1 payments"),
+                r("", "bank account      2 payments", "", "", "bank account      0 payments", "", "", "handed over      1 payments"),
                 r("", "Total number of students", "5"),
                 r("", "Total expected monthly income", "28000"),
                 r("", "Total amount collected", "14000")));
@@ -131,7 +131,7 @@ public class WorkbookImportTest {
         assertThat(p.sessionsChanged()).anySatisfy(x -> assertThat(x).startsWith("Forte").contains("Wednesday"));
         assertThat(p.sessionsRemoved()).containsExactly("Gone");
         assertThat(p.paymentsRemoved().count()).isEqualTo(2);
-        assertThat(p.paymentsAdded().count()).isEqualTo(2);
+        assertThat(p.paymentsAdded().count()).isEqualTo(3);           // the free place is a Rs.0 payment, as the workbook records it
         // nothing saved yet
         assertThat(roster.load().students()).extracting(lk.shalom.receipts.model.Roster.Student::name).contains("Himath Mandinu");
         assertThat(paymentRepo.findByMonth(NOV)).hasSize(2);
@@ -161,6 +161,7 @@ public class WorkbookImportTest {
         List<Payment> nov = paymentRepo.findByMonth(NOV);
         assertThat(nov).extracting(Payment::studentName, Payment::amount, Payment::paidTo).containsExactlyInAnyOrder(
                 org.assertj.core.groups.Tuple.tuple("Giana Neshi", new BigDecimal("8000"), "Shalom Academy"),
+                org.assertj.core.groups.Tuple.tuple("Thenul Munasinghe", BigDecimal.ZERO, "Shalom Academy"),
                 org.assertj.core.groups.Tuple.tuple("Zaki Azhar", new BigDecimal("6000"), "Cash"));
         assertThat(nov.stream().filter(p -> p.studentName().equals("Giana Neshi")).findFirst().orElseThrow().date()).isEqualTo("2026-11-03");
         assertThat(paymentRepo.findByMonth("2026-10")).hasSize(1);

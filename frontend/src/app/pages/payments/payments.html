@@ -94,10 +94,11 @@
         </div>
       </div>
       <div class="pm-counts">
-        <button type="button" class="pm-count is-paid" (click)="filter.set('paid')"><b>{{ v.totals.paid }}</b>Paid</button>
+        <!-- as in the workbook, a free place counts as paid -->
+        <button type="button" class="pm-count is-paid" (click)="filter.set('paid')"><b>{{ v.totals.paid + v.totals.free }}</b>Paid</button>
         <button type="button" class="pm-count is-part" (click)="filter.set('due')"><b>{{ v.totals.partial }}</b>Part paid</button>
         <button type="button" class="pm-count is-due" (click)="filter.set('due')"><b>{{ v.totals.pending }}</b>Pending</button>
-        @if (v.totals.free) { <span class="pm-count is-free"><b>{{ v.totals.free }}</b>Free place</span> }
+        @if (v.totals.free) { <span class="pm-count is-free" title="Counted in Paid, as in the workbook"><b>{{ v.totals.free }}</b>incl. free place{{ v.totals.free === 1 ? '' : 's' }}</span> }
         @if (v.totals.notDue) { <span class="pm-count is-off"><b>{{ v.totals.notDue }}</b>Not due</span> }
       </div>
     </div>
@@ -139,7 +140,7 @@
         @for (t of tabs(); track t.name) {
           <button type="button" role="tab" class="cls-tab" [style.--c]="store.colour(t.name)" [class.is-on]="tab() === t.name && !query()" (click)="tab.set(t.name); query.set('')">
             {{ t.name }}
-            <small>{{ t.toPay ? t.toPay + ' to pay' : 'all paid' }}</small>
+            <small>{{ t.toPay ? t.toPay + ' to pay' : t.paid ? 'all paid' : 'nothing due' }}</small>
             <i class="seg-bar"><span [style.width]="pct(t.done)"></span></i>
           </button>
         }
