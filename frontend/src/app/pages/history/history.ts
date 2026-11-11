@@ -113,11 +113,11 @@ export class History {
   }
 
   protected open(r: Receipt) {
-    this.router.navigate(['/'], { queryParams: { open: r.id } });
+    this.router.navigate(['/receipt'], { queryParams: { open: r.id } });
   }
 
   protected send(r: Receipt) {
-    this.router.navigate(['/'], { queryParams: { open: r.id, send: 1 } });
+    this.router.navigate(['/receipt'], { queryParams: { open: r.id, send: 1 } });
   }
 
   protected async remove(r: Receipt) {

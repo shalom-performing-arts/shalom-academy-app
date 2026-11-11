@@ -279,7 +279,7 @@ export class Payments {
   }
 
   protected issueReceipt(r: MonthRow) {
-    this.router.navigate(['/'], { queryParams: { student: r.studentId, month: this.month() } });
+    this.router.navigate(['/receipt'], { queryParams: { student: r.studentId, month: this.month() } });
   }
 
   /** Searching across every class; one match opens that student's details straight away. */
@@ -341,16 +341,16 @@ export class Payments {
 
   /** The receipt for this month, filled in, with the WhatsApp panel open. Confirming it marks the fee paid. */
   protected issueAndSend(r: MonthRow) {
-    this.router.navigate(['/'], { queryParams: { student: r.studentId, month: this.month(), wa: 1 } });
+    this.router.navigate(['/receipt'], { queryParams: { student: r.studentId, month: this.month(), wa: 1 } });
   }
 
   /** A receipt already issued, sent (again) on WhatsApp. */
   protected sendReceipt(p: Payment) {
-    this.router.navigate(['/'], { queryParams: { open: p.receiptId, send: 1 } });
+    this.router.navigate(['/receipt'], { queryParams: { open: p.receiptId, send: 1 } });
   }
 
   protected openReceipt(p: Payment) {
-    this.router.navigate(['/'], { queryParams: { open: p.receiptId } });
+    this.router.navigate(['/receipt'], { queryParams: { open: p.receiptId } });
   }
 
   protected async exportCsv() {

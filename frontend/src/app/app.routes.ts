@@ -4,7 +4,8 @@ import { Login } from './pages/login/login';
 
 export const routes: Routes = [
   { path: 'login', component: Login, title: 'Sign in · Shalom Academy' },
-  { path: '', canActivate: [authGuard], loadComponent: () => import('./pages/new-receipt/new-receipt').then(m => m.NewReceipt), title: 'New receipt · Shalom Academy' },
+  { path: '', canActivate: [authGuard], loadComponent: () => import('./pages/home/home').then(m => m.Home), title: 'Home · Shalom Academy' },
+  { path: 'receipt', canActivate: [authGuard], loadComponent: () => import('./pages/new-receipt/new-receipt').then(m => m.NewReceipt), title: 'New receipt · Shalom Academy' },
   { path: 'today', canActivate: [authGuard], loadComponent: () => import('./pages/today/today').then(m => m.Today), title: "Today's special · Shalom Academy" },
   { path: 'payments', canActivate: [authGuard], loadComponent: () => import('./pages/payments/payments').then(m => m.Payments), title: 'Payments · Shalom Academy' },
   { path: 'students', canActivate: [authGuard], loadComponent: () => import('./pages/students/students').then(m => m.Students), title: 'Students · Shalom Academy' },

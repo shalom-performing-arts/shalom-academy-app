@@ -13,7 +13,9 @@ import { SITE_LOGO_SMALL } from './core/brand';
 interface NavItem { path: string; label: string; hint: string; tone: string; icon: string }
 
 const NAV: NavItem[] = [
-  { path: '/', label: 'New receipt', hint: 'Issue and send a fee receipt', tone: 'rose',
+  { path: '/', label: 'Home', hint: 'Today at a glance', tone: 'violet',
+    icon: 'M3 11l9-7 9 7 M5 10v10h5v-6h4v6h5V10' },
+  { path: '/receipt', label: 'New receipt', hint: 'Issue and send a fee receipt', tone: 'rose',
     icon: 'M7 3h7l4 4v14H7z M14 3v4h4 M10 12h5 M10 16h5' },
   { path: '/payments', label: 'Payments', hint: 'Who has paid this month', tone: 'green',
     icon: 'M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M3 10h18 M7 15h3' },
