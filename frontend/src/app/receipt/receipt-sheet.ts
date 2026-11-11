@@ -8,8 +8,8 @@ import { amountWords, initials, money, prettyDate } from './format';
 import { paletteFor } from './palette';
 
 /** Files in the app's public folder, used when Settings has no override. */
-export const SITE_LOGO = 'logo.png';
-export const SITE_SIGNATURE = 'signature.png';
+export { SITE_LOGO, SITE_SIGNATURE } from '../core/brand';
+import { SITE_LOGO, SITE_SIGNATURE } from '../core/brand';
 
 /**
  * Density levels for a receipt that runs long. A5 is a fixed page, so the sheet steps down a

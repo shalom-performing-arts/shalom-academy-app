@@ -1,11 +1,10 @@
 import { Routes } from '@angular/router';
 import { authGuard, teacherGuard } from './core/auth';
 import { Login } from './pages/login/login';
-import { NewReceipt } from './pages/new-receipt/new-receipt';
 
 export const routes: Routes = [
   { path: 'login', component: Login, title: 'Sign in · Shalom Academy' },
-  { path: '', component: NewReceipt, canActivate: [authGuard], title: 'New receipt · Shalom Academy' },
+  { path: '', canActivate: [authGuard], loadComponent: () => import('./pages/new-receipt/new-receipt').then(m => m.NewReceipt), title: 'New receipt · Shalom Academy' },
   { path: 'today', canActivate: [authGuard], loadComponent: () => import('./pages/today/today').then(m => m.Today), title: "Today's special · Shalom Academy" },
   { path: 'payments', canActivate: [authGuard], loadComponent: () => import('./pages/payments/payments').then(m => m.Payments), title: 'Payments · Shalom Academy' },
   { path: 'students', canActivate: [authGuard], loadComponent: () => import('./pages/students/students').then(m => m.Students), title: 'Students · Shalom Academy' },

@@ -7,7 +7,7 @@ import { Auth } from './core/auth';
 import { Store } from './core/store';
 import { Toast } from './core/toast';
 import { Dialog } from './core/dialog';
-import { SITE_LOGO } from './receipt/receipt-sheet';
+import { SITE_LOGO_SMALL } from './core/brand';
 
 /** One entry in the side menu. `tone` picks its colour (shell.css). */
 interface NavItem { path: string; label: string; hint: string; tone: string; icon: string }
@@ -56,7 +56,7 @@ export class App {
   /** how many students have their birthday today, for the menu */
   protected readonly birthdaysToday = computed(() =>
     this.store.students().filter(s => s.active && birthday(s, s.dateOfBirth ?? '')?.daysAway === 0).length);
-  protected readonly logo = computed(() => this.store.settings().logo || SITE_LOGO);
+  protected readonly logo = computed(() => this.store.settings().logo || SITE_LOGO_SMALL);
   protected readonly brand = computed(() =>
     this.store.settings().academyName.replace(/^Shalom Academy.*/i, 'Shalom Academy'));
 

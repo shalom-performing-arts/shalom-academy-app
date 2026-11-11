@@ -14,7 +14,7 @@ const LAST_TEACHER = 'sapa.lastTeacher';
   template: `
     <section class="panel login">
       <form class="card" (submit)="$event.preventDefault(); submit()">
-        <div class="login-mark"><img src="logo.png" alt=""></div>
+        <div class="login-mark"><img src="logo-small.png" alt="" width="60" height="55"></div>
         <h1>Shalom Academy</h1>
         <p class="login-sub">of Performing Arts</p>
 
