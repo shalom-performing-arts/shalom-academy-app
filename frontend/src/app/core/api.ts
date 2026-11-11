@@ -136,6 +136,13 @@ export class Api {
   restoreBackup(data: unknown) {
     return firstValueFrom(this.http.post<{ receipts: number }>(`${this.base}/backup/restore`, data));
   }
+
+  /** The office's monthly fee workbook: a preview of the changes, or (apply) the changes made. */
+  importWorkbook(file: File, apply: boolean) {
+    const form = new FormData();
+    form.append('file', file);
+    return firstValueFrom(this.http.post<WorkbookPreview>(`${this.base}/import/workbook?apply=${apply}`, form));
+  }
 }
 
 /** The server's own message when it sent one, otherwise something a person can act on. */
@@ -146,4 +153,29 @@ export function errorMessage(e: unknown, fallback: string): string {
     if (m) return m;
   }
   return fallback;
+}
+
+/** What importing the fee workbook changes (or changed, once applied). */
+export interface WorkbookPreview {
+  month: string;
+  monthLabel: string;
+  applied: boolean;
+  checks: { what: string; workbook: string; app: string; ok: boolean }[];
+  students: number;
+  active: number;
+  added: string[];
+  renamed: { from: string; to: string; where: string }[];
+  moved: { name: string; from: string; to: string }[];
+  fees: { name: string; from: string; to: string }[];
+  inactivated: string[];
+  reactivated: string[];
+  sessionsAdded: string[];
+  sessionsChanged: string[];
+  sessionsRemoved: string[];
+  classFees: string[];
+  paymentsRemoved: { count: number; amount: number };
+  paymentsAdded: { count: number; amount: number };
+  byPaidTo: { name: string; count: number; amount: number }[];
+  receiptsRemoved: string[];
+  warnings: string[];
 }

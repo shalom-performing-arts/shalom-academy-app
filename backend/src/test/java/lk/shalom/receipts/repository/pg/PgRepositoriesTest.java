@@ -291,6 +291,40 @@ class PgRepositoriesTest {
                 .satisfies(a -> assertThat(a.at()).isEqualTo(Instant.parse("2026-11-04T09:42:00Z")));
     }
 
+    @Test
+    void theFeeWorkbookImportsIntoTheDatabase() throws Exception {
+        assumeTrue(Files.exists(dir.resolve("students.json")), "no data files to import");
+        importer(repos(), dir).afterSingletonsInstantiated();
+        Repos pg = repos();
+        var monthService = new lk.shalom.receipts.service.MonthService(pg.months(), pg.payments(), pg.roster(), pg.settings());
+        var paymentService = new lk.shalom.receipts.service.PaymentService(pg.payments(), monthService, pg.roster(), pg.settings());
+        var receiptService = new lk.shalom.receipts.service.ReceiptService(pg.receipts(), paymentService);
+        var workbook = new lk.shalom.receipts.service.WorkbookImport(pg.roster(), pg.payments(), pg.months(), monthService,
+                receiptService, pg.settings());
+
+        workbook.apply(lk.shalom.receipts.service.WorkbookImportTest.workbook());
+
+        // read back as after a restart
+        Repos again = repos();
+        var nov = again.payments().findByMonth("2026-11");
+        assertThat(nov).extracting(lk.shalom.receipts.model.Payment::studentName)
+                .containsExactlyInAnyOrder("Giana Neshi", "Zaki Azhar");
+        assertThat(again.roster().load().sessions()).extracting(lk.shalom.receipts.model.Roster.Session::name)
+                .containsExactly("Forte", "Legato");
+        assertThat(again.roster().load().students().stream().filter(lk.shalom.receipts.model.Roster.Student::active)
+                .map(lk.shalom.receipts.model.Roster.Student::name))
+                .containsExactlyInAnyOrder("Giana Neshi", "Thenul Munasinghe", "Zaki Azhar", "Himath Mandiv", "Ian Karunaratne");
+        assertThat(again.receipts().findAll()).noneMatch(r -> "November 2026".equals(r.period()));
+        var view = new lk.shalom.receipts.service.MonthService(again.months(), again.payments(), again.roster(), again.settings())
+                .view("2026-11");
+        assertThat(view.totals().collected()).isEqualByComparingTo("14000");
+        assertThat(view.totals().expected()).isEqualByComparingTo("28000");
+        // and importing the same workbook again changes nothing more
+        var twice = workbook.preview(lk.shalom.receipts.service.WorkbookImportTest.workbook());
+        assertThat(twice.added()).isEmpty();
+        assertThat(twice.inactivated()).isEmpty();
+    }
+
     /* ---------------- comparing ---------------- */
 
     private static final Pattern INSTANT = Pattern.compile("\"(\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d+)?Z)\"");

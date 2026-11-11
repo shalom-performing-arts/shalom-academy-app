@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { Api, errorMessage } from '../../core/api';
 import { AppSettings, ClassFee, FeeType, SiblingDiscount, StudentField } from '../../core/models';
 import { ListEditor } from '../../shared/list-editor';
+import { WorkbookImport } from './workbook-import';
 import { Store } from '../../core/store';
 import { Toast } from '../../core/toast';
 import { num } from '../../receipt/format';
@@ -15,7 +16,7 @@ const classesToText = (list: ClassFee[]) =>
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, RouterLink, ListEditor],
+  imports: [FormsModule, RouterLink, ListEditor, WorkbookImport],
   templateUrl: './settings.html',
 })
 export class Settings {
