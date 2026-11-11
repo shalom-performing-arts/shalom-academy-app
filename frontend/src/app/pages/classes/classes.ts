@@ -228,7 +228,7 @@ type View = 'class' | 'day';
                   [class.is-dragging]="dragId() === s.id" draggable="true"
                   (dragstart)="dragStart($event, s, g)" (dragend)="dragEnd()"
                   [title]="tip(s) + '\\n\\nDrag to another session to move them, or click for options'" (click)="openMove(s)">
-                <span class="grip" aria-hidden="true">⋮⋮</span><span class="n">{{ i + 1 }}</span><span class="nm">{{ s.name }}</span>
+                <span class="grip" aria-hidden="true">⋮⋮</span><span class="n">{{ i + 1 }}</span><span class="nm"><b>{{ firstName(s.name) }}</b>@if (otherNames(s.name); as rest) {{{ " " }}<span class="rest">{{ rest }}</span>}</span>
                 @if (payLabel(s); as pl) { <i class="pay">{{ pl }}</i> }
               </li>
             } @empty {
@@ -645,7 +645,7 @@ type View = 'class' | 'day';
       border:1px solid color-mix(in srgb, var(--dot) 35%, #fff)}
     .cv-names li.st-pending{box-shadow:inset 3px 0 0 #e5484d}
     .cv-names li.st-part{box-shadow:inset 3px 0 0 #f0a020}
-    .cv-names .nm{overflow-wrap:anywhere; line-height:1.3}
+    .cv-names .nm{line-height:1.3}
 
     /* ---- the free places, as one row ---- */
     .cv-names li.cv-free{gap:10px; font-style:normal}
@@ -691,6 +691,20 @@ type View = 'class' | 'day';
     .cv-when .cv-wday{border-radius:12px 0 0 12px; letter-spacing:1.5px}
     .cv-when .cv-time{border-radius:0 12px 12px 0; border-left:0; white-space:nowrap}
     .cv-when .cv-time:only-child{border-radius:12px; border-left:2px solid color-mix(in srgb, var(--c) 45%, #fff)}
+
+    /* ---- names, readable at a glance ---- */
+    .cv-names{gap:3px}
+    .cv-names li{font-size:16px; padding:9px 10px; color:#1d1b1e; line-height:1.3}
+    .cv-names .nm b{font-weight:800; color:#1d1b1e; letter-spacing:.1px}
+    .cv-names .nm .rest{font-weight:500; color:#5f5266}
+    .cv-names .nm{overflow-wrap:break-word}
+    .cv-names .n{width:20px; font-size:11.5px; color:#b3a6b8}
+    .cv-names li i.pay{font-size:11.5px; padding:3px 9px}
+    .cv.size-s .cv-names li{font-size:14px; padding:6px 8px}
+    .cv.size-l .cv-names li{font-size:19px; padding:11px 11px}
+    .cv.size-l .cv-names li i.pay{font-size:13px; padding:3px 10px}
+    .cv.size-l .cv-names .n{font-size:13px; width:24px}
+    @media (max-width:720px){ .cv-names li{font-size:17px; padding:10px 9px} }
 
     /* ---- editing a session ---- */
     .cv-edit-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
@@ -768,6 +782,17 @@ export class Classes {
     if (this.order() !== 'unpaid') return g.students;
     const rank: Record<string, number> = { pending: 0, part: 1, none: 2, off: 3, free: 4, paid: 5 };
     return [...g.students].sort((a, b) => (rank[this.statusClass(a)] ?? 2) - (rank[this.statusClass(b)] ?? 2) || byName(a, b));
+  }
+
+  /** "Kenul" from "Kenul Devjaan Withanage": the name read first, at a glance */
+  protected firstName(name: string): string {
+    const w = words(name);
+    return w.slice(0, leadLength(w)).join(' ');
+  }
+
+  protected otherNames(name: string): string {
+    const w = words(name);
+    return w.slice(leadLength(w)).join(' ');
   }
 
   /** the payment, in a word */
@@ -1192,4 +1217,17 @@ function readView(): ViewPrefs {
 
 function writeView(v: ViewPrefs) {
   try { localStorage.setItem(VIEW_KEY, JSON.stringify(v)); } catch { /* private mode: not remembered */ }
+}
+
+/* ---------------- names at a glance ---------------- */
+
+function words(name: string): string[] {
+  return (name ?? '').trim().split(/\s+/).filter(Boolean);
+}
+
+/** how many words make the bold part: the first name, with any initials before it ("N.M.A. Ayon") */
+function leadLength(w: string[]): number {
+  let i = 0;
+  while (i < w.length - 1 && w[i].includes('.')) i++;
+  return Math.min(w.length, i + 1);
 }
