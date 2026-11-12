@@ -289,6 +289,19 @@ class PgRepositoriesTest {
         });
         assertThat(repos().teachers().get().arrivals()).singleElement()
                 .satisfies(a -> assertThat(a.at()).isEqualTo(Instant.parse("2026-11-04T09:42:00Z")));
+
+        // and a class moved to another day, then taken back
+        pg.teachers().update(b -> {
+            b.moves().add(new lk.shalom.receipts.model.TeacherBook.ClassMove("mv1", "Pianissimo", "Adult", "wed-1815-adult",
+                    "2026-11-12", "2026-11-14", "18:00", 60, "Rain", Instant.parse("2026-11-11T10:00:00Z")));
+            return b;
+        });
+        assertThat(repos().teachers().get().moves()).singleElement().satisfies(m -> {
+            assertThat(m.toDate()).isEqualTo("2026-11-14");
+            assertThat(m.start()).isEqualTo("18:00");
+        });
+        repos().teachers().update(b -> { b.moves().clear(); return b; });
+        assertThat(repos().teachers().get().moves()).isEmpty();
     }
 
     @Test

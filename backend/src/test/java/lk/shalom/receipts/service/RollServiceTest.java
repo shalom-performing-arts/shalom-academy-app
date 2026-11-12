@@ -71,6 +71,51 @@ class RollServiceTest {
     }
 
     @Test
+    void aClassMovedToAnotherDayIsHeldThereForStudentsAndTeachers() {
+        // rain: Forte (Wednesday 3:30 - 4:30 PM) on Wednesday 4 Nov is held on Friday 6 Nov at 6 PM instead
+        RollService s = at("2026-11-03T10:00");
+        var move = s.moveClass(new RollService.MoveInput("Forte", "2026-11-04", "2026-11-06", "18:00", "Rain"));
+        assertThat(move.time()).isEqualTo("6:00 PM – 7:00 PM");
+        assertThat(move.toLabel()).isEqualTo("Friday 6 November");
+
+        // Wednesday: not held, and says where it went
+        var wed = s.day(LocalDate.parse("2026-11-04"));
+        assertThat(wed.classes()).extracting(c -> c.session().name()).doesNotContain("Forte");
+        assertThat(wed.moved()).singleElement().satisfies(m -> {
+            assertThat(m.kind()).isEqualTo("away");
+            assertThat(m.otherLabel()).isEqualTo("Fri 6 Nov");
+        });
+        // Friday: held at the new time, and its register can be taken that day
+        RollService fri = at("2026-11-06T18:05");
+        var c = fri.day(LocalDate.parse("2026-11-06")).classes().stream().filter(x -> x.session().name().equals("Forte")).findFirst().orElseThrow();
+        assertThat(c.time()).isEqualTo("6:00 - 7:00 PM");
+        assertThat(c.state()).isEqualTo("now");
+        fri.mark(new MarkInput("2026-11-06", "Forte", "SAPA-1000", RollBook.PRESENT, null), "office", "Office");
+        assertThatThrownBy(() -> fri.mark(new MarkInput("2026-11-04", "Forte", "SAPA-1000", "P", null), "office", "Office"))
+                .hasMessageContaining("meets on Wednesday");
+        // the month register has Friday 6 Nov in place of Wednesday 4 Nov
+        assertThat(fri.month("Forte", "2026-11").dates()).extracting(RollService.MonthDate::date)
+                .contains("2026-11-06").doesNotContain("2026-11-04");
+
+        // the teacher's class moves with it: marked on Friday, from 15 minutes before 6 PM
+        Clock friday = Clock.fixed(LocalDateTime.parse("2026-11-06T17:50").atZone(SL).toInstant(), SL);
+        TeacherService teachers = new TeacherService(new JsonTeacherRepository(mapper, dir.toString()), friday);
+        assertThat(teachers.me("ijini").today()).extracting(t -> t.slot().id() + " " + t.slot().start()).contains("wed-1530-kids 18:00");
+        Clock wednesday = Clock.fixed(LocalDateTime.parse("2026-11-04T15:30").atZone(SL).toInstant(), SL);
+        assertThat(new TeacherService(new JsonTeacherRepository(mapper, dir.toString()), wednesday).me("ijini").today())
+                .extracting(t -> t.slot().id()).doesNotContain("wed-1530-kids");
+
+        // the same class cannot be moved twice; cancelling puts it back
+        assertThatThrownBy(() -> s.moveClass(new RollService.MoveInput("Forte", "2026-11-04", "2026-11-07", "10:00", null)))
+                .hasMessageContaining("already been moved");
+        assertThatThrownBy(() -> s.moveClass(new RollService.MoveInput("Forte", "2026-11-05", "2026-11-07", "10:00", null)))
+                .hasMessageContaining("meets on Wednesday");
+        s.cancelMove(move.id());
+        assertThat(s.day(LocalDate.parse("2026-11-04")).classes()).extracting(x -> x.session().name()).contains("Forte");
+        assertThat(s.moves()).isEmpty();
+    }
+
+    @Test
     void classTimesAreReadTheWayTheyAreWritten() {
         assertThat(RollService.times("3:30 - 4:30 PM")).isEqualTo(new RollService.Times(LocalTime.of(15, 30), LocalTime.of(16, 30)));
         assertThat(RollService.times("11:30 AM - 12:30 PM").start()).isEqualTo(LocalTime.of(11, 30));

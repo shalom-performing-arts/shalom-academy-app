@@ -6,6 +6,8 @@ import lk.shalom.receipts.model.RollBook.Makeup;
 import lk.shalom.receipts.model.Roster;
 import lk.shalom.receipts.model.Roster.Session;
 import lk.shalom.receipts.model.Roster.Student;
+import lk.shalom.receipts.model.TeacherBook;
+import lk.shalom.receipts.model.TeacherBook.ClassMove;
 import lk.shalom.receipts.model.TeacherBook.Holiday;
 import lk.shalom.receipts.repository.RollRepository;
 import lk.shalom.receipts.repository.TeacherRepository;
@@ -51,6 +53,7 @@ public class RollService {
     private static final DateTimeFormatter LONG = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.ENGLISH);
     private static final DateTimeFormatter SHORT = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH);
     private static final DateTimeFormatter DAY_SHORT = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH);
+    private static final DateTimeFormatter FULL_DAY = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH);
     /** a class shows as "now" from this many minutes before it starts */
     static final int EARLY = 15;
 
@@ -107,7 +110,15 @@ public class RollService {
                             int covers, String markedBy, Instant markedAt) {}
 
     /** @param focus the class to open on: the one on now, else the next, else the last */
-    public record RollDay(String date, String label, boolean today, Holiday holiday, List<RollClass> classes, String focus) {}
+    /**
+     * A class moved this day: away (not held today; held instead on another day) or in (held
+     * today instead of its usual day).
+     */
+    public record Moved(String id, String session, String category, String kind, String otherDate, String otherLabel,
+                        String time, String note) {}
+
+    public record RollDay(String date, String label, boolean today, Holiday holiday, List<RollClass> classes, String focus,
+                          List<Moved> moved) {}
 
     public RollDay day(LocalDate date) {
         Roster r = roster.load();
@@ -115,7 +126,7 @@ public class RollService {
         LocalDate today = today();
         LocalTime now = LocalDateTime.now(clock.withZone(TeacherService.SRI_LANKA)).toLocalTime();
         String day = date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-        List<Session> sessions = r.sessions().stream().filter(s -> day.equalsIgnoreCase(s.day()))
+        List<Session> sessions = sessionsOn(r, date).stream()
                 .sorted(Comparator.comparing(s -> times(s.time()).start())).toList();
 
         List<RollClass> classes = new ArrayList<>();
@@ -134,7 +145,17 @@ public class RollService {
                 .or(() -> classes.stream().filter(c -> c.state().equals("next")).map(c -> c.session().name()).findFirst())
                 .orElse(classes.isEmpty() ? "" : (date.isAfter(today) ? classes.getFirst() : classes.getLast()).session().name());
         Holiday h = teachers.get().holidays().stream().filter(x -> date.toString().equals(x.date())).findFirst().orElse(null);
-        return new RollDay(date.toString(), date.format(LONG), date.equals(today), h, classes, focus);
+        List<Moved> moved = new ArrayList<>();
+        for (ClassMove m : teachers.get().moves()) {
+            if (m.fromDate().equals(date.toString())) {
+                moved.add(new Moved(m.id(), m.session(), m.category(), "away", m.toDate(), LocalDate.parse(m.toDate()).format(DAY_SHORT),
+                        clock12(m.start()), m.note()));
+            } else if (m.toDate().equals(date.toString())) {
+                moved.add(new Moved(m.id(), m.session(), m.category(), "in", m.fromDate(), LocalDate.parse(m.fromDate()).format(DAY_SHORT),
+                        clock12(m.start()), m.note()));
+            }
+        }
+        return new RollDay(date.toString(), date.format(LONG), date.equals(today), h, classes, focus, moved);
     }
 
     private RollClass build(Roster r, RollBook book, LocalDate date, Session s, Times t, String state) {
@@ -308,7 +329,7 @@ public class RollService {
 
     private void checkDay(LocalDate date, Session s) {
         String day = date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-        if (!day.equalsIgnoreCase(s.day())) {
+        if (!meetsOn(s, date)) {
             throw ApiException.badRequest(s.name() + " meets on " + s.day() + ", not on " + day + ".");
         }
         if (date.isAfter(today())) throw ApiException.badRequest("That class has not happened yet.");
@@ -412,9 +433,9 @@ public class RollService {
                 m.status(), m.note(), m.byName(), m.at());
     }
 
-    private static void onItsDay(LocalDate date, Session s, String what) {
+    private void onItsDay(LocalDate date, Session s, String what) {
         String day = date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-        if (!day.equalsIgnoreCase(s.day())) {
+        if (!meetsOn(s, date)) {
             throw ApiException.badRequest(what + " (" + s.name() + ") meets on " + s.day() + ", not on " + day + ".");
         }
     }
@@ -447,7 +468,7 @@ public class RollService {
         RollBook book = repo.get();
         List<LocalDate> days = new ArrayList<>();
         for (LocalDate d = ym.atDay(1); !d.isAfter(ym.atEndOfMonth()); d = d.plusDays(1)) {
-            if (d.getDayOfWeek() == dow) days.add(d);
+            if (meetsOn(s, d)) days.add(d);
         }
         // students who only came here for a cover-up belong to their own session's register
         Set<String> visits = new HashSet<>();
@@ -490,6 +511,120 @@ public class RollService {
         // late and made-up both count as attended
         Integer rate = p + l + a + mu == 0 ? null : Math.round(100f * (p + l + mu) / (p + l + a + mu));
         return new MonthRow(id, name, cells, p, l, a, mu, rate, left);
+    }
+
+    /* =========================================================
+       Moving one class to another day (rain, a clash, a holiday)
+       ========================================================= */
+
+    public record MoveInput(String session, String fromDate, String toDate, String start, String note) {}
+
+    public record MoveOut(String id, String session, String category, String fromDate, String fromLabel, String toDate,
+                          String toLabel, String start, String time, String note, boolean past) {}
+
+    /** The sessions held on a date: the usual ones, less any moved away, plus any moved in (at their new time). */
+    List<Session> sessionsOn(Roster r, LocalDate date) {
+        String day = date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH), iso = date.toString();
+        List<ClassMove> moves = teachers.get().moves();
+        List<Session> out = new ArrayList<>();
+        for (Session s : r.sessions()) {
+            if (day.equalsIgnoreCase(s.day())
+                    && moves.stream().noneMatch(m -> m.session().equalsIgnoreCase(s.name()) && iso.equals(m.fromDate()))) {
+                out.add(s);
+            }
+        }
+        for (ClassMove m : moves) {
+            if (!iso.equals(m.toDate())) continue;
+            r.sessions().stream().filter(s -> s.name().equalsIgnoreCase(m.session())).findFirst()
+                    .ifPresent(s -> out.add(new Session(s.name(), s.family(), s.meaning(), s.symbol(), s.symbolStyle(), s.category(),
+                            day, movedTime(s.time(), m.start()), s.max())));
+        }
+        return out;
+    }
+
+    private boolean meetsOn(Session s, LocalDate date) {
+        return sessionsOn(new Roster(List.of(), List.of(s), List.of()), date).stream().anyMatch(x -> x.name().equalsIgnoreCase(s.name()));
+    }
+
+    /**
+     * Holds one class on another day and time instead, e.g. Pianissimo on Wednesday 12 Nov at
+     * Friday 14 Nov, 18:00. The teachers' timetable slot for it moves too.
+     */
+    public MoveOut moveClass(MoveInput in) {
+        if (in == null) throw ApiException.badRequest("Nothing was sent.");
+        Roster r = roster.load();
+        Session s = session(r, in.session());
+        LocalDate from = date(in.fromDate()), to = date(in.toDate());
+        LocalTime start;
+        try {
+            start = LocalTime.parse(in.start() == null ? "" : in.start().trim());
+        } catch (Exception e) {
+            throw ApiException.badRequest("Give the new start time, e.g. 18:00.");
+        }
+        String day = from.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+        if (!day.equalsIgnoreCase(s.day())) {
+            throw ApiException.badRequest(s.name() + " meets on " + s.day() + "s, not on " + day + " " + from.format(DAY_SHORT) + ".");
+        }
+        if (to.isBefore(today().minusDays(7))) throw ApiException.badRequest("The new date is in the past.");
+        TeacherBook book = teachers.get();
+        if (book.moves().stream().anyMatch(m -> m.session().equalsIgnoreCase(s.name()) && m.fromDate().equals(from.toString()))) {
+            throw ApiException.conflict(s.name() + " on " + from.format(DAY_SHORT) + " has already been moved. Cancel that move first.");
+        }
+        if (to.equals(from) && start.equals(times(s.time()).start())) {
+            throw ApiException.badRequest("That is when " + s.name() + " already meets.");
+        }
+        Times t = times(s.time());
+        int minutes = (int) java.time.Duration.between(t.start(), t.end()).toMinutes();
+        String slotId = slotFor(book, s);
+        String note = in.note() == null ? null : clip(in.note());
+        ClassMove m = new ClassMove("mv" + UUID.randomUUID().toString().replace("-", "").substring(0, 12), s.name(), s.category(),
+                slotId, from.toString(), to.toString(), start.toString(), minutes > 0 ? minutes : 60, note, Instant.now(clock));
+        teachers.update(b -> { b.moves().add(m); return b; });
+        return out(m);
+    }
+
+    /** Moves from a week ago on, soonest first. */
+    public List<MoveOut> moves() {
+        String since = today().minusDays(7).toString();
+        return teachers.get().moves().stream().filter(m -> m.toDate().compareTo(since) >= 0 || m.fromDate().compareTo(since) >= 0)
+                .sorted(Comparator.comparing(ClassMove::fromDate)).map(this::out).toList();
+    }
+
+    public void cancelMove(String id) {
+        if (teachers.get().moves().stream().noneMatch(m -> m.id().equals(id))) throw ApiException.notFound("No such class move.");
+        teachers.update(b -> { b.moves().removeIf(m -> m.id().equals(id)); return b; });
+    }
+
+    private MoveOut out(ClassMove m) {
+        LocalDate from = LocalDate.parse(m.fromDate()), to = LocalDate.parse(m.toDate());
+        LocalTime start = LocalTime.parse(m.start());
+        String time = clock12(m.start()) + " – " + clock12(start.plusMinutes(m.minutes() == null ? 60 : m.minutes()).toString());
+        return new MoveOut(m.id(), m.session(), m.category(), m.fromDate(), from.format(FULL_DAY), m.toDate(), to.format(FULL_DAY),
+                m.start(), time, m.note(), to.isBefore(today()) && from.isBefore(today()));
+    }
+
+    /** the teachers' timetable slot for a session: the same day, start and class */
+    private static String slotFor(TeacherBook b, Session s) {
+        LocalTime start = times(s.time()).start();
+        List<lk.shalom.receipts.model.TeacherBook.Slot> same = b.schedule().stream()
+                .filter(x -> s.day().equalsIgnoreCase(x.day()) && x.start() != null && x.start().equals(start.toString())).toList();
+        return same.stream().filter(x -> s.category().equalsIgnoreCase(x.category())).findFirst()
+                .or(() -> same.size() == 1 ? java.util.Optional.of(same.getFirst()) : java.util.Optional.empty())
+                .map(lk.shalom.receipts.model.TeacherBook.Slot::id).orElse(null);
+    }
+
+    /** "6:15 - 7:15 PM" held from 18:00 instead → "6:00 - 7:00 PM" */
+    static String movedTime(String usual, String start) {
+        Times t = times(usual);
+        LocalTime from = LocalTime.parse(start);
+        LocalTime to = from.plus(java.time.Duration.between(t.start(), t.end()));
+        DateTimeFormatter hm = DateTimeFormatter.ofPattern("h:mm", Locale.ENGLISH), hma = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
+        boolean sameHalf = (from.getHour() < 12) == (to.getHour() < 12);
+        return (sameHalf ? from.format(hm) : from.format(hma)) + " - " + to.format(hma);
+    }
+
+    private static String clock12(String hhmm) {
+        return LocalTime.parse(hhmm).format(DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH));
     }
 
     /* =========================================================

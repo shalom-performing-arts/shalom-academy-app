@@ -180,9 +180,23 @@ public class TeacherService {
 
     /** The timetable for that weekday, earliest first. */
     static List<Slot> slotsOn(TeacherBook b, LocalDate d) {
-        String day = dayName(d);
-        return b.schedule().stream().filter(s -> day.equalsIgnoreCase(s.day()))
-                .sorted(Comparator.comparing(s -> s.start() == null ? "" : s.start())).toList();
+        String day = dayName(d), iso = d.toString();
+        List<Slot> out = new ArrayList<>();
+        for (Slot s : b.schedule()) {
+            // a class moved to another day this week is not held on its usual day
+            if (day.equalsIgnoreCase(s.day())
+                    && b.moves().stream().noneMatch(m -> s.id().equals(m.slotId()) && iso.equals(m.fromDate()))) {
+                out.add(s);
+            }
+        }
+        // and a class moved to this day is, at its new time
+        for (TeacherBook.ClassMove m : b.moves()) {
+            if (!iso.equals(m.toDate()) || m.slotId() == null) continue;
+            b.schedule().stream().filter(s -> s.id().equals(m.slotId())).findFirst()
+                    .ifPresent(s -> out.add(new Slot(s.id(), day, m.start(), s.minutes(), s.category(), s.label())));
+        }
+        out.sort(Comparator.comparing(s -> s.start() == null ? "" : s.start()));
+        return out;
     }
 
     static Holiday holiday(TeacherBook b, String iso) {
@@ -719,7 +733,7 @@ public class TeacherService {
                 schedule == null ? b.schedule() : schedule,
                 holidays == null ? b.holidays() : holidays,
                 in.site() == null ? b.site() : in.site(),
-                b.attendance(), b.adjustments(), b.payouts(), b.arrivals()));
+                b.attendance(), b.adjustments(), b.payouts(), b.arrivals(), b.moves()));
         return setup();
     }
 

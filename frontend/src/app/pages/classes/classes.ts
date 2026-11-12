@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { PoolPicker } from '../registrations/pool-picker';
 import { Api, errorMessage } from '../../core/api';
 import { Toast } from '../../core/toast';
-import { RollApi, coverMessage } from '../../core/roll';
+import { ClassMove, RollApi, coverMessage } from '../../core/roll';
 import { PayStatus, Session, Student } from '../../core/models';
 import { Store } from '../../core/store';
 import { money } from '../../receipt/format';
@@ -193,9 +193,14 @@ type View = 'class' | 'day';
           </div>
           @if (compact) { <span class="cv-cat">{{ g.category }}</span> }
           @if (sessionOf(g); as se) {
+            <button type="button" class="cv-edit" (click)="openMove2(se)" [title]="'Move one ' + g.title + ' class to another day (rain, a clash)'" aria-label="Move a class">📅</button>
             <button type="button" class="cv-edit" (click)="editSession(se)" [title]="'Change ' + g.title + ' (day, time, places)'" aria-label="Edit session">✎</button>
           }
         </div>
+        @for (mv of movesOf(g.key); track mv.id) {
+          <p class="cv-moved">📅 <span><b>{{ mv.fromLabel }}</b> moved to <b>{{ mv.toLabel }}, {{ mv.time }}</b>{{ mv.note ? ' · ' + mv.note : '' }}</span>
+            <button type="button" (click)="cancelMove(mv)" title="Cancel this move" aria-label="Cancel this move">✕</button></p>
+        }
         @if (g.time || g.day) {
           <!-- the day and time on one strong line: the first thing read on a card -->
           <p class="cv-when">
@@ -254,6 +259,55 @@ type View = 'class' | 'day';
     <!-- ============ fill a free place from the registration pool ============ -->
     @if (filling(); as fs) {
       <app-pool-picker [session]="fs" (closed)="filling.set(null)" />
+    }
+
+    <!-- ============ move one class to another day ============ -->
+    @if (moving2(); as mv) {
+      <div class="sheet-backdrop" (click)="moving2.set(null)"></div>
+      <aside class="sheet small cv-edit-sheet" role="dialog" aria-modal="true" aria-label="Move a class">
+        <header class="sheet-head">
+          <div><h2>📅 Move a {{ mv.session.name }} class</h2><small>{{ mv.session.category }} · usually {{ mv.session.day }} {{ mv.session.time }}</small></div>
+          <button type="button" class="btn-icon" (click)="moving2.set(null)" aria-label="Close">✕</button>
+        </header>
+        <div class="sheet-body">
+          @if (mv.done; as d) {
+            <div class="cv-done">
+              <p class="cv-done-head">✅ Moved: {{ d.fromLabel }} → {{ d.toLabel }}, {{ d.time }}</p>
+              <p class="hint">Attendance, the teachers' phones and the Home page now show it on the new day.</p>
+              <label class="field"><span>Message for the parents</span>
+                <textarea rows="8" [value]="mv.message" (input)="patchMove({ message: $any($event.target).value })"></textarea></label>
+              <div class="cv-done-act">
+                <button type="button" class="btn btn-wa" (click)="copyMsg(mv.message)">📋 Copy message</button>
+                <span class="spacer"></span>
+                <button type="button" class="btn btn-ghost" (click)="moving2.set(null)">Done</button>
+              </div>
+            </div>
+          } @else {
+            <h3 class="cv-step">1 · Which class</h3>
+            <div class="cv-dates">
+              @for (dt of mv.dates; track dt.iso) {
+                <button type="button" class="cv-date" [class.is-on]="mv.from === dt.iso" (click)="patchMove({ from: dt.iso, to: mv.to || dt.iso })">
+                  <b>{{ dt.day }}</b><span>{{ dt.label }}</span>@if (dt.today) { <i>today</i> }
+                </button>
+              }
+            </div>
+            <h3 class="cv-step">2 · Held instead on</h3>
+            <div class="cv-edit-grid">
+              <label class="field"><span>Date</span>
+                <input type="date" [value]="mv.to" (input)="patchMove({ to: $any($event.target).value })"></label>
+              <label class="field"><span>Start time</span>
+                <input type="time" [value]="mv.start" (input)="patchMove({ start: $any($event.target).value })"></label>
+              <label class="field"><span>Reason <em>(optional)</em></span>
+                <input type="text" maxlength="120" placeholder="e.g. heavy rain" [value]="mv.note" (input)="patchMove({ note: $any($event.target).value })"></label>
+            </div>
+            <footer class="sheet-foot">
+              <button type="button" class="btn btn-ghost" (click)="moving2.set(null)">Cancel</button>
+              <span class="spacer"></span>
+              <button type="button" class="btn" [disabled]="busy() || !mv.from || !mv.to || !mv.start" (click)="saveMove()">{{ busy() ? 'Saving…' : 'Move the class' }}</button>
+            </footer>
+          }
+        </div>
+      </aside>
     }
 
     <!-- ============ change a session: day, time, places ============ -->
@@ -707,6 +761,12 @@ type View = 'class' | 'day';
     .cv.size-l .cv-names .n{font-size:13px; width:24px}
     @media (max-width:720px){ .cv-names li{font-size:17px; padding:10px 9px} }
 
+    /* ---- a class moved to another day ---- */
+    .cv-moved{margin:0; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px; font-size:13px; line-height:1.35;
+      background:#eef3ff; border:1px solid #c9d8fb; color:#22479c}
+    .cv-moved span{flex:1; min-width:0}
+    .cv-moved button{flex:none; width:26px; height:26px; border-radius:8px; border:0; background:#fff; color:#22479c; cursor:pointer; font-size:12px}
+
     /* ---- editing a session ---- */
     .cv-edit-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
     .cv-edit-grid .field:last-child{grid-column:1 / -1}
@@ -811,6 +871,70 @@ export class Classes {
 
   /* ---------------- change a session ---------------- */
 
+  /* ---------------- move one class to another day ---------------- */
+
+  protected readonly moves = signal<ClassMove[]>([]);
+  protected readonly moving2 = signal<MoveForm | null>(null);
+
+  protected movesOf(session: string): ClassMove[] {
+    return this.moves().filter(m => m.session === session && !m.past);
+  }
+
+  private async loadMoves() {
+    try { this.moves.set(await this.roll.moves()); } catch { /* the cards just show no moves */ }
+  }
+
+  protected openMove2(s: Session) {
+    const dates: MoveForm['dates'] = [];
+    const want = DAYS.indexOf(s.day);
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 35 && dates.length < 5; i++) {
+      const x = new Date(d.getTime() + i * 86_400_000);
+      if ((x.getDay() + 6) % 7 !== want) continue;
+      dates.push({ iso: isoDate(x), day: x.toLocaleDateString('en-GB', { weekday: 'short' }),
+        label: x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), today: i === 0 });
+    }
+    const from = dates[0]?.iso ?? '';
+    this.moving2.set({ session: s, dates, from, to: from, start: startOf(s.time), note: '', done: null, message: '' });
+  }
+
+  protected patchMove(p: Partial<MoveForm>) {
+    this.moving2.update(m => m && ({ ...m, ...p }));
+  }
+
+  protected async saveMove() {
+    const m = this.moving2();
+    if (!m || this.busy()) return;
+    this.busy.set(true);
+    try {
+      const done = await this.roll.moveClass(m.session.name, m.from, m.to, m.start, m.note.trim());
+      const academy = this.store.settings().academyName || 'Shalom Academy of Performing Arts';
+      const message = `Dear parents,\n\n${m.note.trim() ? 'Due to ' + m.note.trim().replace(/^due to /i, '') + ', the' : 'The'} ${m.session.category} class `
+        + `${m.session.name} on ${done.fromLabel} will be held on ${done.toLabel} at ${done.time.split(' – ')[0]} instead.\n\n`
+        + `Please bring your child at the new time. Thank you for understanding.\n\n${academy}`;
+      this.moving2.set({ ...m, done, message });
+      await this.loadMoves();
+      this.toast.success(`${m.session.name} moved to ${done.toLabel}.`);
+    } catch (err) {
+      this.toast.error(errorMessage(err, 'Could not move the class.'));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected async cancelMove(mv: ClassMove) {
+    if (!(await this.dialog.confirm(`Cancel this move?\n\n${mv.session} goes back to ${mv.fromLabel} at its usual time.`,
+      { ok: 'Cancel the move', cancel: 'Keep it', danger: true }))) return;
+    try {
+      await this.roll.cancelMove(mv.id);
+      await this.loadMoves();
+      this.toast.success(`${mv.session} is back on ${mv.fromLabel}.`);
+    } catch (err) {
+      this.toast.error(errorMessage(err, 'Could not cancel the move.'));
+    }
+  }
+
   protected readonly sessionEdit = signal<SessionEdit | null>(null);
 
   /** the real session behind a card (not "Not placed yet" or a session that no longer exists) */
@@ -847,6 +971,7 @@ export class Classes {
   }
 
   constructor() {
+    void this.loadMoves();
     // remember how the page was set up
     effect(() => writeView({ textSize: this.textSize(), names: this.names(), order: this.order(),
                              cardSize: this.cardSize(), collapsed: [...this.collapsed()] }));
@@ -1232,4 +1357,30 @@ function leadLength(w: string[]): number {
   let i = 0;
   while (i < w.length - 1 && w[i].includes('.')) i++;
   return Math.min(w.length, i + 1);
+}
+
+
+interface MoveForm {
+  session: Session;
+  dates: { iso: string; day: string; label: string; today: boolean }[];
+  from: string;
+  to: string;
+  start: string;
+  note: string;
+  done: ClassMove | null;
+  message: string;
+}
+
+function isoDate(d: Date): string {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+/** "6:15 - 7:15 PM" → "18:15" */
+function startOf(time: string): string {
+  const m = /(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(AM|PM)?/i.exec(time || '');
+  if (!m) return '';
+  let h = Number(m[1]) % 12;
+  const mer = (m[3] || m[4] || '').toUpperCase();
+  if (mer === 'PM' || (!mer && h < 8)) h += 12;
+  return String(h).padStart(2, '0') + ':' + (m[2] || '00');
 }

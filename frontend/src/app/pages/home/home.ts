@@ -93,6 +93,11 @@ interface Birthday { name: string; when: string; age: number | null; today: bool
             } @empty {
               <p class="hm-empty">{{ r.holiday?.classOff ? 'No classes today — ' + r.holiday?.name : 'No classes today.' }}</p>
             }
+            @for (mv of r.moved ?? []; track mv.id) {
+              <p class="hm-moved">📅 {{ mv.kind === 'away'
+                ? mv.session + ' is not today — moved to ' + mv.otherLabel + ', ' + mv.time
+                : mv.session + ' is today at ' + mv.time + ', instead of ' + mv.otherLabel }}</p>
+            }
           } @else if (failed().has('roll')) { <p class="hm-empty">Could not load today's classes.</p> }
           @else { <div class="hm-skel"></div> }
         </a>
@@ -223,6 +228,8 @@ interface Birthday { name: string; when: string; age: number | null; today: bool
     .hm-class-what small{font-size:12px; color:var(--muted)}
     .hm-pill{flex:none; padding:4px 10px; border-radius:999px; font-size:11.5px; font-weight:800; background:#f1ecf4; color:#6b5872; white-space:nowrap}
     .hm-pill.ok{background:#dff5e9; color:#0b6b3f} .hm-pill.due{background:#fde3e3; color:#b3261e} .hm-pill.now{background:#fff1d6; color:#8a5300}
+
+    .hm-moved{margin:0; padding:8px 10px; border-radius:12px; background:#eef3ff; border:1px solid #c9d8fb; color:#22479c; font-size:13px}
 
     /* ---- needs attention ---- */
     .hm-att{display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:14px; text-decoration:none; color:inherit;

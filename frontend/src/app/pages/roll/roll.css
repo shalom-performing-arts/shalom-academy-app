@@ -243,3 +243,6 @@
   .rl-list{display:grid; grid-template-columns:1fr 1fr; column-gap:14px}
   .rl-row:last-child{border-bottom:1px solid #f4f0f6}
 }
+
+/* a class moved to another day, or to this one */
+.rl-holiday.rl-moved{background:#eef3ff; border-color:#c9d8fb; color:#22479c}

@@ -65,6 +65,21 @@ export interface RollDay {
   classes: RollClass[];
   /** the class to open on */
   focus: string;
+  /** classes moved away from this day, or to it */
+  moved?: MovedToday[];
+}
+
+/** a class moved this day: "away" (held on otherLabel instead) or "in" (held today instead of otherLabel) */
+export interface MovedToday {
+  id: string; session: string; category: string; kind: 'away' | 'in';
+  otherDate: string; otherLabel: string; time: string; note: string | null;
+}
+
+/** one class held on another day and time instead */
+export interface ClassMove {
+  id: string; session: string; category: string;
+  fromDate: string; fromLabel: string; toDate: string; toLabel: string;
+  start: string; time: string; note: string | null; past: boolean;
 }
 
 export interface MonthDate { date: string; label: string; future: boolean; holiday: boolean; markedBy: string | null }
@@ -117,6 +132,19 @@ export class RollApi {
 
   cancelMakeup(id: string) {
     return firstValueFrom(this.http.delete<void>(`/api/roll/makeups/${encodeURIComponent(id)}`));
+  }
+
+  /** classes moved to another day and time, from a week ago on */
+  moves() {
+    return firstValueFrom(this.http.get<ClassMove[]>('/api/roll/moves'));
+  }
+
+  moveClass(session: string, fromDate: string, toDate: string, start: string, note: string) {
+    return firstValueFrom(this.http.post<ClassMove>('/api/roll/moves', { session, fromDate, toDate, start, note }));
+  }
+
+  cancelMove(id: string) {
+    return firstValueFrom(this.http.delete<void>(`/api/roll/moves/${encodeURIComponent(id)}`));
   }
 
   month(session: string, month: string) {

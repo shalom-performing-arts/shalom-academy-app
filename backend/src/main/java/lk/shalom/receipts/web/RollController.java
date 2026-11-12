@@ -54,6 +54,22 @@ public class RollController {
 
     /* ---- cover-up classes ---- */
 
+    /** one class moved to another day and time (rain, a clash) */
+    @GetMapping("/moves")
+    public List<RollService.MoveOut> moves() {
+        return service.moves();
+    }
+
+    @PostMapping("/moves")
+    public RollService.MoveOut moveClass(@RequestBody RollService.MoveInput in) {
+        return service.moveClass(in);
+    }
+
+    @DeleteMapping("/moves/{id}")
+    public void cancelMove(@PathVariable String id) {
+        service.cancelMove(id);
+    }
+
     @GetMapping("/makeups")
     public List<RollService.MakeupOut> makeups(@RequestParam String month) {
         return service.makeups(month);

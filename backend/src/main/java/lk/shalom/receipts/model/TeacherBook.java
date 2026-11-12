@@ -25,7 +25,8 @@ public record TeacherBook(
         List<Mark> attendance,
         List<Adjustment> adjustments,
         List<Payout> payouts,
-        List<Arrival> arrivals
+        List<Arrival> arrivals,
+        List<ClassMove> moves
 ) {
 
     /**
@@ -138,9 +139,23 @@ public record TeacherBook(
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Arrival(String date, String teacherId, Instant at, Double lat, Double lng, Double accuracy, Double distance) {}
 
+    /**
+     * One class on one date held on another day and time instead, e.g. Pianissimo on Wednesday
+     * 12 Nov moved to Friday 14 Nov at 18:00 because of rain. The weekly timetable stays as it is.
+     *
+     * @param session  the student session moved ("Pianissimo")
+     * @param slotId   the teachers' timetable slot for it, when there is one
+     * @param fromDate the date it would have met, "2026-11-12"
+     * @param toDate   the date it meets instead
+     * @param start    the new start, "18:00"; it runs as long as it usually does
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record ClassMove(String id, String session, String category, String slotId, String fromDate, String toDate,
+                            String start, Integer minutes, String note, Instant createdAt) {}
+
     public static TeacherBook empty() {
         return new TeacherBook(new ArrayList<>(), Rates.defaults(), new ArrayList<>(), new ArrayList<>(),
-                Site.defaults(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+                Site.defaults(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     }
 
     /** Lists never null and settings filled, whatever an older file left out. */
@@ -150,7 +165,7 @@ public record TeacherBook(
                 nz(rates.transport(), Rates.defaults().transport()), rates.minClasses());
         Site s = site == null ? Site.defaults() : new Site(site.lat(), site.lng(), site.radiusM(), site.early(), site.late(), site.done());
         return new TeacherBook(list(teachers), r, list(schedule), list(holidays), s, list(attendance),
-                list(adjustments), list(payouts), list(arrivals));
+                list(adjustments), list(payouts), list(arrivals), list(moves));
     }
 
     private static <T> List<T> list(List<T> in) {

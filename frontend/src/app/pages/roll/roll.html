@@ -26,6 +26,12 @@
       @if (d.holiday?.classOff) {
         <div class="rl-holiday">🚫 <b>{{ d.holiday!.name }}</b> — no classes today.</div>
       }
+      @for (mv of d.moved ?? []; track mv.id) {
+        <div class="rl-holiday rl-moved">📅
+          @if (mv.kind === 'away') { <span><b>{{ mv.session }}</b> is not held today — moved to <b>{{ mv.otherLabel }}, {{ mv.time }}</b>{{ mv.note ? ' (' + mv.note + ')' : '' }}.</span> }
+          @else { <span><b>{{ mv.session }}</b> is held today at <b>{{ mv.time }}</b>, instead of {{ mv.otherLabel }}{{ mv.note ? ' (' + mv.note + ')' : '' }}.</span> }
+        </div>
+      }
 
       <!-- ============ cover-ups this month (office) ============ -->
       @if (!teacher && makeups().length) {

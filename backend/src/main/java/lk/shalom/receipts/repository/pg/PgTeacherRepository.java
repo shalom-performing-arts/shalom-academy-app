@@ -3,6 +3,7 @@ package lk.shalom.receipts.repository.pg;
 import lk.shalom.receipts.model.TeacherBook;
 import lk.shalom.receipts.model.TeacherBook.Adjustment;
 import lk.shalom.receipts.model.TeacherBook.Arrival;
+import lk.shalom.receipts.model.TeacherBook.ClassMove;
 import lk.shalom.receipts.model.TeacherBook.Holiday;
 import lk.shalom.receipts.model.TeacherBook.Mark;
 import lk.shalom.receipts.model.TeacherBook.Payout;
@@ -45,7 +46,7 @@ public class PgTeacherRepository implements TeacherRepository {
         TeacherBook now = get();
         TeacherBook before = new TeacherBook(List.copyOf(now.teachers()), now.rates(), List.copyOf(now.schedule()),
                 List.copyOf(now.holidays()), now.site(), List.copyOf(now.attendance()), List.copyOf(now.adjustments()),
-                List.copyOf(now.payouts()), List.copyOf(now.arrivals()));
+                List.copyOf(now.payouts()), List.copyOf(now.arrivals()), List.copyOf(now.moves()));
         TeacherBook after = change.apply(now).clean();
         try {
             db.inTx(() -> write(before, after));
@@ -94,8 +95,14 @@ public class PgTeacherRepository implements TeacherRepository {
                 select date::text as d, teacher_id, at, lat, lng, accuracy, distance from teacher_arrivals order by date, at""",
                 (rs, n) -> new Arrival(rs.getString("d"), rs.getString("teacher_id"), Db.instant(rs, "at"), Db.dbl(rs, "lat"),
                         Db.dbl(rs, "lng"), Db.dbl(rs, "accuracy"), Db.dbl(rs, "distance"))));
+        b.moves().addAll(db.jdbc.query("""
+                select id, session, category, slot_id, from_date::text as f, to_date::text as t, start, minutes, note, created_at
+                from class_moves order by from_date, created_at""",
+                (rs, n) -> new ClassMove(rs.getString("id"), rs.getString("session"), rs.getString("category"), rs.getString("slot_id"),
+                        rs.getString("f"), rs.getString("t"), rs.getString("start"), Db.integer(rs, "minutes"), rs.getString("note"),
+                        Db.instant(rs, "created_at"))));
         return new TeacherBook(b.teachers(), rates, b.schedule(), b.holidays(), site, b.attendance(), b.adjustments(),
-                b.payouts(), b.arrivals()).clean();
+                b.payouts(), b.arrivals(), b.moves()).clean();
     }
 
     /* ---------------- writing ---------------- */
@@ -120,6 +127,7 @@ public class PgTeacherRepository implements TeacherRepository {
                 x -> new PeriodKey(x.period(), x.teacherId()), true);
         Db.Changes<Payout, PeriodKey> p = Db.diff(before.payouts(), after.payouts(),
                 x -> new PeriodKey(x.period(), x.teacherId()), true);
+        Db.Changes<ClassMove, String> mv = Db.diff(before.moves(), after.moves(), ClassMove::id, false);
         Db.Changes<Arrival, ArrivalKey> v = Db.diff(before.arrivals(), after.arrivals(),
                 x -> new ArrivalKey(x.date(), x.teacherId()), false);
 
@@ -130,6 +138,7 @@ public class PgTeacherRepository implements TeacherRepository {
         }
         for (PeriodKey k : a.deletes()) db.jdbc.update("delete from salary_adjustments where period = ? and teacher_id = ?", k.period(), k.teacherId());
         for (PeriodKey k : p.deletes()) db.jdbc.update("delete from salary_payouts where period = ? and teacher_id = ?", k.period(), k.teacherId());
+        for (String id : mv.deletes()) db.jdbc.update("delete from class_moves where id = ?", id);
         for (ArrivalKey k : v.deletes()) db.jdbc.update("delete from teacher_arrivals where date = ?::date and teacher_id = ?", k.date(), k.teacherId());
 
         // 2. teachers, then what hangs off them
@@ -176,6 +185,17 @@ public class PgTeacherRepository implements TeacherRepository {
                     on conflict (date, teacher_id) do update set at = excluded.at, lat = excluded.lat, lng = excluded.lng,
                         accuracy = excluded.accuracy, distance = excluded.distance""",
                     x.date(), x.teacherId(), Db.ts(x.at()), x.lat(), x.lng(), x.accuracy(), x.distance());
+        }
+
+        for (Db.At<ClassMove> at : mv.upserts()) {
+            ClassMove x = at.item();
+            db.jdbc.update("""
+                    insert into class_moves (id, session, category, slot_id, from_date, to_date, start, minutes, note, created_at)
+                    values (?, ?, ?, ?, ?::date, ?::date, ?, ?, ?, ?)
+                    on conflict (id) do update set session = excluded.session, category = excluded.category, slot_id = excluded.slot_id,
+                        from_date = excluded.from_date, to_date = excluded.to_date, start = excluded.start, minutes = excluded.minutes,
+                        note = excluded.note""",
+                    x.id(), x.session(), x.category(), x.slotId(), x.fromDate(), x.toDate(), x.start(), x.minutes(), x.note(), Db.ts(x.createdAt()));
         }
 
         // 3. teachers who left
